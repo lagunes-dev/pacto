@@ -1,11 +1,32 @@
-# Pacto · Demo conductual v2
+# Pacto
 
-Prototipo autónomo y responsive para seguimiento de hábitos en pareja, diseñado alrededor de autonomía, recuperación y apoyo explícito.
+Aplicación React, TypeScript y Vite en desarrollo. El estado actual incluye la base visual y las rutas iniciales; todavía no implementa autenticación ni persistencia de hábitos.
 
-## Abrir la demo
+## Requisitos
 
-- Apertura rápida: `index.html`.
-- PWA completa: servir la carpeta mediante HTTP, por ejemplo `python -m http.server 8080`, y abrir `http://localhost:8080`.
+- Node.js y npm compatibles con las versiones declaradas en `package.json`.
+
+## Desarrollo
+
+```bash
+npm ci
+npm run dev
+```
+
+Vite mostrará en la terminal la URL local de desarrollo.
+
+## Verificación
+
+```bash
+npm test
+npm run build
+```
+
+El build de producción se genera en `dist/`.
+
+## Demo original
+
+La demo estática anterior se conserva sin cambios en `reference/demo-original/`. Puede servirse desde esa carpeta mediante HTTP para consultar el diseño de referencia; no representa la implementación React actual.
 
 ## Cambios principales
 
@@ -26,4 +47,4 @@ Prototipo autónomo y responsive para seguimiento de hábitos en pareja, diseña
 
 ## Alcance
 
-La interfaz es funcional y guarda datos localmente. Las notificaciones, autenticación y sincronización entre dos dispositivos son simuladas. Para producción se debe conectar Supabase Auth, Realtime y las políticas RLS incluidas.
+La implementación React actual es una base visual. La autenticación, la persistencia de hábitos, el progreso, la integración con Supabase y las capacidades PWA todavía no están implementadas ni verificadas.
