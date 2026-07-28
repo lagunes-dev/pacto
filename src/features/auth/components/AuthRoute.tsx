@@ -10,6 +10,7 @@ export function AuthRoute({ mode }: { mode: "login" | "register" }) {
   const location = useLocation();
   const [values, setValues] = useState<AuthCredentials>({ email: "", password: "" });
   const [errors, setErrors] = useState<Partial<Record<keyof AuthCredentials | "form", string>>>({});
+  const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
   const isRegister = mode === "register";
 
   if (isResolving) return <p role="status">Comprobando sesión…</p>;
@@ -25,7 +26,15 @@ export function AuthRoute({ mode }: { mode: "login" | "register" }) {
     }
     setErrors({});
     try {
-      await (isRegister ? register(parsed.data) : login(parsed.data));
+      if (isRegister) {
+        const result = await register(parsed.data);
+        if (result.status === "confirmation-required") {
+          setConfirmationEmail(result.email);
+          return;
+        }
+      } else {
+        await login(parsed.data);
+      }
       const destination = (location.state as { from?: string } | null)?.from ?? "/progress";
       navigate(destination, { replace: true });
     } catch (error) {
@@ -38,7 +47,8 @@ export function AuthRoute({ mode }: { mode: "login" | "register" }) {
       <p className="eyebrow">Espacio personal</p>
       <h1 id="auth-title">{isRegister ? "Creá tu cuenta privada." : "Volvé a tus decisiones."}</h1>
       <p className="route-lead">Tus hábitos y tu progreso pertenecen únicamente a tu sesión.</p>
-      <div className="notice" role="status">Modo fixture exclusivo de desarrollo. Supabase todavía no está integrado ni verificado.</div>
+      <div className="notice" role="status">La persistencia depende del adaptador configurado. El fixture funciona únicamente en desarrollo.</div>
+      {confirmationEmail && <div className="notice" role="status">Revisá {confirmationEmail} para confirmar tu cuenta antes de iniciar sesión.</div>}
       <form className="auth-form" onSubmit={submit} noValidate>
         <label htmlFor="email">Correo</label>
         <input id="email" name="email" type="email" autoComplete="email" value={values.email} aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "email-error" : undefined} onChange={(e) => setValues({ ...values, email: e.target.value })} />

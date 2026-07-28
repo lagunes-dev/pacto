@@ -15,7 +15,9 @@ npm run dev
 
 Vite mostrará en la terminal la URL local de desarrollo.
 
-Copiá `.env.example` a `.env.local` para elegir el adaptador. `VITE_DATA_ADAPTER=fixture` funciona únicamente en desarrollo. Las variables públicas de Supabase definen un límite de configuración, pero NO existe todavía una integración Supabase activa o verificada.
+Copiá `.env.example` a `.env.local` para elegir el adaptador. `VITE_DATA_ADAPTER=fixture` funciona únicamente en desarrollo y debe seleccionarse de forma explícita. `VITE_DATA_ADAPTER=supabase` habilita el límite público de autenticación solamente cuando `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` están completas; una configuración incompleta falla cerrada y no usa fixtures como reemplazo.
+
+Las variables `VITE_*` son visibles en el navegador. Usá únicamente URL y clave publicable; nunca agregues claves `service_role`, VAPID, credenciales de pruebas ni otros secretos. Esta fase integra Auth, pero todavía no integra repositorios de datos ni constituye evidencia de RLS en vivo.
 
 ## Verificación
 
@@ -36,7 +38,7 @@ Las pruebas actuales se ejecutan con Vitest/jsdom e incluyen el flujo completo d
 - `/partnership/support`: solicitud, reconocimiento y cierre explícitos, disponible solamente mientras el vínculo está activo.
 - Sin sesión, las rutas privadas redirigen a `/sign-in`.
 
-El modo fixture conserva usuarios y datos únicamente en memoria durante la ejecución. Recargar la aplicación elimina ese estado. Cuando el servicio configurado no está implementado o falla, la interfaz informa que no se guardaron cambios, conserva los valores seguros y permite reintentar donde corresponde.
+El modo fixture conserva usuarios y datos únicamente en memoria durante la ejecución. Recargar la aplicación elimina ese estado. El límite Supabase permite registro, confirmación por correo, inicio/cierre y recuperación de sesión; los repositorios de datos siguen fallando cerrados hasta sus fases posteriores. Cuando el servicio configurado no está implementado o falla, la interfaz informa que no se guardaron cambios, conserva los valores seguros y permite reintentar donde corresponde.
 
 La arquitectura y los límites de reemplazo de adaptadores se documentan en [`docs/first-vertical-slice.md`](docs/first-vertical-slice.md).
 
@@ -48,4 +50,4 @@ La demo estática anterior se conserva sin cambios en `reference/demo-original/`
 
 ## Alcance
 
-Los contratos no aceptan notas privadas ni incluyen detalles de hábitos, resúmenes o campos arbitrarios en payloads de vínculo, preferencias o apoyo. El fixture no persiste al recargar y no prueba autenticación real. No envía alertas automáticas: no hay Realtime, Push, correo ni jobs. Vistas compartidas, resúmenes, habit sharing, despliegue, persistencia real, RLS, Supabase, navegador E2E y capacidades PWA siguen fuera del alcance y no están verificadas.
+Los contratos no aceptan notas privadas ni incluyen detalles de hábitos, resúmenes o campos arbitrarios en payloads de vínculo, preferencias o apoyo. El fixture no persiste al recargar ni prueba autenticación real. No envía alertas automáticas: no hay Realtime, Push, correo ni jobs. Vistas compartidas, resúmenes, habit sharing, despliegue, persistencia real, RLS, repositorios Supabase, navegador E2E y capacidades PWA siguen fuera del alcance y no están verificadas. Sin credenciales públicas disponibles en este entorno, la autenticación Supabase en vivo también permanece sin validar.

@@ -5,7 +5,7 @@ import type { PartnershipRepository } from "../features/partnership/repository";
 import type { PreferenceRepository } from "../features/preferences/repository";
 import type { SupportRepository } from "../features/support/repository";
 import { createFixtureServices } from "./fixture/services";
-import { createSupabaseAuthBoundary } from "./supabase/boundary";
+import { createSupabaseAuthBoundary, createUnavailableAuthPort } from "./supabase/auth";
 
 export type AppServices = {
   auth: AuthPort;
@@ -16,14 +16,30 @@ export type AppServices = {
   support: SupportRepository;
 };
 
-export function createAppServices(): AppServices {
-  const adapter = import.meta.env.VITE_DATA_ADAPTER ?? "fixture";
-  if (adapter === "fixture" && import.meta.env.DEV) return createFixtureServices();
+export type AppEnvironment = {
+  adapter: string;
+  isDevelopment: boolean;
+  supabaseUrl: string;
+  supabasePublishableKey: string;
+};
 
-  const auth = createSupabaseAuthBoundary({
-    url: import.meta.env.VITE_SUPABASE_URL ?? "",
-    publishableKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "",
-  });
+function readEnvironment(): AppEnvironment {
+  return {
+    adapter: import.meta.env.VITE_DATA_ADAPTER ?? "",
+    isDevelopment: import.meta.env.DEV,
+    supabaseUrl: import.meta.env.VITE_SUPABASE_URL ?? "",
+    supabasePublishableKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "",
+  };
+}
+
+export function createAppServices(environment = readEnvironment()): AppServices {
+  if (environment.adapter === "fixture" && environment.isDevelopment) return createFixtureServices();
+
+  const auth = environment.adapter === "supabase"
+    ? createSupabaseAuthBoundary({ url: environment.supabaseUrl, publishableKey: environment.supabasePublishableKey })
+    : createUnavailableAuthPort(new Error(environment.adapter === "fixture"
+      ? "El fixture está deshabilitado fuera de desarrollo. No se guardaron cambios."
+      : "No hay un adaptador de datos disponible. No se guardaron cambios."));
   const unavailable = async (): Promise<never> => {
     throw new Error("El servicio de datos no está disponible. No se guardaron cambios.");
   };

@@ -30,7 +30,8 @@ export function createFixtureServices(store = createFixtureStore()) {
       if (store.accounts.some((account) => account.email === email)) throw new Error("Ese correo ya está registrado.");
       const account = { id: crypto.randomUUID(), email, password: credentials.password, displayName: email.split("@")[0] };
       store.accounts.push(account);
-      return (session = { user: { id: account.id, email } });
+      session = { user: { id: account.id, email } };
+      return { status: "authenticated" as const, session };
     },
     async login(credentials: AuthCredentials) {
       const account = store.accounts.find((item) => item.email === credentials.email.trim().toLowerCase() && item.password === credentials.password);

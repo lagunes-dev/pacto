@@ -8,10 +8,12 @@ describe("development fixture privacy contracts", () => {
   it("resolves registration, logout, login, and session states", async () => {
     const services = createFixtureServices();
     const registered = await services.auth.register(ownerA);
-    expect(await services.auth.getSession()).toEqual(registered);
+    expect(registered.status).toBe("authenticated");
+    if (registered.status !== "authenticated") throw new Error("Fixture registration must authenticate.");
+    expect(await services.auth.getSession()).toEqual(registered.session);
     await services.auth.logout();
     expect(await services.auth.getSession()).toBeNull();
-    expect(await services.auth.login(ownerA)).toEqual(registered);
+    expect(await services.auth.login(ownerA)).toEqual(registered.session);
     await expect(services.auth.login({ ...ownerA, password: "incorrect" })).rejects.toThrow("incorrectos");
   });
 
@@ -45,7 +47,8 @@ describe("development fixture privacy contracts", () => {
     const store = createFixtureStore();
     const a = createFixtureServices(store);
     const b = createFixtureServices(store);
-    const sessionA = await a.auth.register(ownerA);
+    const registrationA = await a.auth.register(ownerA);
+    if (registrationA.status !== "authenticated") throw new Error("Fixture registration must authenticate.");
     await b.auth.register(ownerB);
 
     const invite = await a.partnership.createInvite(ownerB.email);
@@ -57,6 +60,6 @@ describe("development fixture privacy contracts", () => {
     await b.partnership.pause();
     await expect(a.support.list()).rejects.toThrow("Active partnership required");
     expect(await a.preferences.getMine()).toMatchObject({ shareProgress: false, allowSupportRequests: true });
-    expect(sessionA.user.id).not.toBe((await b.auth.getSession())?.user.id);
+    expect(registrationA.session.user.id).not.toBe((await b.auth.getSession())?.user.id);
   });
 });

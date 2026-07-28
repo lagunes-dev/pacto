@@ -1,12 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useState, type PropsWithChildren } from "react";
 
-import type { AuthCredentials, Session } from "../model";
+import type { AuthCredentials, RegistrationResult, Session } from "../model";
 import type { AuthPort } from "../port";
 
 type AuthState = {
   session: Session | null;
   isResolving: boolean;
-  register(credentials: AuthCredentials): Promise<void>;
+  register(credentials: AuthCredentials): Promise<RegistrationResult>;
   login(credentials: AuthCredentials): Promise<void>;
   logout(): Promise<void>;
 };
@@ -26,7 +26,11 @@ export function AuthProvider({ authPort, children }: PropsWithChildren<{ authPor
   const value = useMemo<AuthState>(() => ({
     session,
     isResolving,
-    register: async (credentials) => setSession(await authPort.register(credentials)),
+    register: async (credentials) => {
+      const result = await authPort.register(credentials);
+      if (result.status === "authenticated") setSession(result.session);
+      return result;
+    },
     login: async (credentials) => setSession(await authPort.login(credentials)),
     logout: async () => { await authPort.logout(); setSession(null); },
   }), [authPort, isResolving, session]);
