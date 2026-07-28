@@ -2,6 +2,7 @@ import type { PropsWithChildren, ReactNode } from "react";
 import { NavLink, useLocation } from "react-router";
 
 import { appConfig } from "../../app/config";
+import { useAuth } from "../../features/auth/queries/AuthProvider";
 
 type NavItem = {
   to: string;
@@ -9,16 +10,16 @@ type NavItem = {
   icon: ReactNode;
 };
 
-const navItems: NavItem[] = [
+const privateNavItems: NavItem[] = [
   { to: "/habits/new", label: "Crear hábito", icon: <PlusIcon /> },
   { to: "/progress", label: "Progreso", icon: <ChartIcon /> },
-  { to: "/sign-in", label: "Acceso", icon: <LockIcon /> },
+  { to: "/partnership", label: "Vínculo", icon: <PeopleIcon /> },
 ];
 
-function Navigation({ label, mobile = false }: { label: string; mobile?: boolean }) {
+function Navigation({ label, items, mobile = false }: { label: string; items: NavItem[]; mobile?: boolean }) {
   return (
     <nav className={mobile ? "mobile-nav glass" : "nav"} aria-label={label}>
-      {navItems.map((item) => (
+      {items.map((item) => (
         <NavLink
           key={`${label}-${item.to}`}
           to={item.to}
@@ -34,7 +35,9 @@ function Navigation({ label, mobile = false }: { label: string; mobile?: boolean
 
 export function AppShell({ children }: PropsWithChildren) {
   const location = useLocation();
-  const title = location.pathname === "/progress" ? "Progreso personal" : "Espacio privado";
+  const { session } = useAuth();
+  const navItems = session ? privateNavItems : [{ to: "/sign-in", label: "Acceso", icon: <LockIcon /> }];
+  const title = location.pathname.startsWith("/partnership") ? "Vínculo y consentimiento" : location.pathname === "/progress" ? "Progreso personal" : "Espacio privado";
   const today = new Intl.DateTimeFormat(appConfig.locale, {
     weekday: "long",
     day: "numeric",
@@ -55,7 +58,7 @@ export function AppShell({ children }: PropsWithChildren) {
           </span>
         </NavLink>
         <p className="nav-label">Espacio personal</p>
-        <Navigation label="Navegación principal" />
+        <Navigation label="Navegación principal" items={navItems} />
         <div className="privacy-note">
           <LockIcon />
           <span>Tu información permanece privada.</span>
@@ -75,7 +78,7 @@ export function AppShell({ children }: PropsWithChildren) {
         </main>
       </div>
 
-      <Navigation label="Navegación móvil" mobile />
+       <Navigation label="Navegación móvil" items={navItems} mobile />
     </div>
   );
 }
@@ -90,4 +93,8 @@ function ChartIcon() {
 
 function LockIcon() {
   return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>;
+}
+
+function PeopleIcon() {
+  return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3" /><circle cx="17" cy="9" r="2.5" /><path d="M2.5 20c.5-4 2.4-6 5.5-6s5 2 5.5 6m0-4c.8-1 1.9-1.5 3.5-1.5 2.6 0 4 1.7 4.5 4.5" /></svg>;
 }

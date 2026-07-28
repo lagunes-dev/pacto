@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tansta
 import { useRepositories } from "../../app/providers";
 import { useAuth } from "../auth/queries/AuthProvider";
 import { supportKeys } from "../support/queries";
-import type { PartnershipView } from "./model";
+import type { InviteView, PartnershipView } from "./model";
 
 export const partnershipKeys = {
   all: (actorId: string) => ["partnership", actorId] as const,
@@ -35,7 +35,7 @@ export function useMyPartnership() {
   return useQuery({ queryKey: partnershipKeys.mine(actorId), queryFn: partnership.getMine, enabled: Boolean(session) });
 }
 
-function usePartnershipMutation<T>(action: string, mutationFn: (value: T) => Promise<unknown>) {
+function usePartnershipMutation<TInput, TOutput>(action: string, mutationFn: (value: TInput) => Promise<TOutput>) {
   const client = useQueryClient();
   const actorId = useActorId();
   return useMutation({
@@ -47,22 +47,22 @@ function usePartnershipMutation<T>(action: string, mutationFn: (value: T) => Pro
 
 export function useCreateInvite() {
   const { partnership } = useRepositories();
-  return usePartnershipMutation<string>("create-invite", (email) => partnership.createInvite(email));
+  return usePartnershipMutation<string, InviteView>("create-invite", (email) => partnership.createInvite(email));
 }
 
 export function useAcceptInvite() {
   const { partnership } = useRepositories();
-  return usePartnershipMutation<string>("accept-invite", (code) => partnership.acceptInvite(code));
+  return usePartnershipMutation<string, PartnershipView>("accept-invite", (code) => partnership.acceptInvite(code));
 }
 
 export function useRejectInvite() {
   const { partnership } = useRepositories();
-  return usePartnershipMutation<string>("reject-invite", (code) => partnership.rejectInvite(code));
+  return usePartnershipMutation<string, void>("reject-invite", (code) => partnership.rejectInvite(code));
 }
 
 export function useCancelInvite() {
   const { partnership } = useRepositories();
-  return usePartnershipMutation<void>("cancel-invite", () => partnership.cancelInvite());
+  return usePartnershipMutation<void, void>("cancel-invite", () => partnership.cancelInvite());
 }
 
 function useRevokePartnership(action: "pause" | "end", mutationFn: () => Promise<PartnershipView>) {

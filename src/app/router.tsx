@@ -11,6 +11,9 @@ import {
 } from "./App";
 import { AuthRoute } from "../features/auth/components/AuthRoute";
 import { RequireSession } from "../features/auth/components/RequireSession";
+import { PartnershipRoute } from "../features/partnership/components/PartnershipRoute";
+import { PreferencesRoute } from "../features/preferences/components/PreferencesRoute";
+import { SupportRoute } from "../features/support/components/SupportRoute";
 
 export const appRoutes: RouteObject[] = [
   {
@@ -25,6 +28,9 @@ export const appRoutes: RouteObject[] = [
         children: [
           { path: "habits/new", element: <NewHabitRoute /> },
           { path: "progress", element: <ProgressRoute /> },
+          { path: "partnership", element: <PartnershipRoute /> },
+          { path: "partnership/preferences", element: <PreferencesRoute /> },
+          { path: "partnership/support", element: <SupportRoute /> },
         ],
       },
     ],

@@ -1,6 +1,6 @@
 # Pacto
 
-Aplicación React, TypeScript y Vite en desarrollo. Incluye un límite de sesión, registro e inicio/cierre de sesión con fixture local de memoria exclusivamente para desarrollo, más contratos privados de hábitos y progreso.
+Aplicación React, TypeScript y Vite en desarrollo. Incluye sesión, hábitos privados, progreso personal y un fixture local de dos personas para consentimiento, preferencias propias y solicitudes explícitas de apoyo.
 
 ## Requisitos
 
@@ -31,6 +31,9 @@ Las pruebas actuales se ejecutan con Vitest/jsdom e incluyen el flujo completo d
 - `/sign-in` y `/register`: autenticación de desarrollo.
 - `/habits/new`: ruta protegida para crear, listar, editar y eliminar hábitos privados.
 - `/progress`: ruta protegida para progreso personal basado solamente en datos persistidos por el adaptador activo.
+- `/partnership`: invitación, aceptación o rechazo explícitos, cancelación, pausa y finalización del vínculo.
+- `/partnership/preferences`: preferencias propias; nunca permite consultar las de otra persona.
+- `/partnership/support`: solicitud, reconocimiento y cierre explícitos, disponible solamente mientras el vínculo está activo.
 - Sin sesión, las rutas privadas redirigen a `/sign-in`.
 
 El modo fixture conserva usuarios y datos únicamente en memoria durante la ejecución. Recargar la aplicación elimina ese estado. Cuando el servicio configurado no está implementado o falla, la interfaz informa que no se guardaron cambios, conserva los valores seguros y permite reintentar donde corresponde.
@@ -45,4 +48,4 @@ La demo estática anterior se conserva sin cambios en `reference/demo-original/`
 
 ## Alcance
 
-Los repositorios de hábitos/progreso obtienen el dueño desde la sesión: sus contratos no aceptan `ownerId` ni notas privadas. El fixture no persiste al recargar y no prueba autenticación real. Partner linking, vistas compartidas, Realtime, push, cola offline, despliegue, persistencia real, RLS, Supabase y capacidades PWA siguen fuera del alcance y no están verificadas.
+Los contratos no aceptan notas privadas ni incluyen detalles de hábitos, resúmenes o campos arbitrarios en payloads de vínculo, preferencias o apoyo. El fixture no persiste al recargar y no prueba autenticación real. No envía alertas automáticas: no hay Realtime, Push, correo ni jobs. Vistas compartidas, resúmenes, habit sharing, despliegue, persistencia real, RLS, Supabase, navegador E2E y capacidades PWA siguen fuera del alcance y no están verificadas.
