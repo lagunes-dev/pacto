@@ -324,6 +324,175 @@ h1 {
   color: var(--color-text);
 }
 
+.habit-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.habit-form label {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.habit-form input,
+.habit-form select {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 0.8rem;
+  background: rgba(5, 12, 24, 0.62);
+  color: var(--color-text);
+  font: inherit;
+  padding: 0.85rem 1rem;
+}
+
+.field-error {
+  margin: -0.35rem 0 0;
+  color: #ffb4b4;
+  font-size: 0.88rem;
+}
+
+.form-actions,
+.habit-actions,
+.route-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.route-heading {
+  justify-content: space-between;
+}
+
+.text-link {
+  color: var(--color-accent);
+  font-weight: 800;
+  text-decoration-thickness: 0.12em;
+  text-underline-offset: 0.25em;
+}
+
+.service-alert {
+  display: grid;
+  gap: 0.35rem;
+  border: 1px solid rgba(255, 180, 180, 0.35);
+  border-radius: 0.85rem;
+  background: rgba(93, 28, 38, 0.28);
+  color: #ffe5e5;
+  padding: 0.9rem 1rem;
+}
+
+.service-alert .text-button {
+  justify-self: start;
+}
+
+.habit-list {
+  margin-top: 2rem;
+}
+
+.habit-list h2 {
+  margin-bottom: 0.8rem;
+}
+
+.habit-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1rem 0;
+}
+
+.habit-item h3,
+.habit-item p {
+  margin: 0;
+}
+
+.habit-item p,
+.empty-copy {
+  color: var(--color-text-muted);
+}
+
+.danger-button {
+  border: 0;
+  background: transparent;
+  color: #ffb4b4;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+}
+
+.danger-button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.progress-route {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.progress-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.progress-grid article,
+.progress-empty {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 1rem;
+}
+
+.progress-grid article {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.progress-grid strong {
+  color: var(--color-accent);
+  font-family: var(--font-display);
+  font-size: clamp(1.7rem, 5vw, 2.7rem);
+}
+
+.progress-grid span,
+.progress-empty p {
+  color: var(--color-text-muted);
+}
+
+.progress-habits {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.visually-hidden,
+.sr-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 40rem) {
+  .habit-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .progress-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .field-error {
   margin: 0 0 4px;
   color: #ffc1bb;
