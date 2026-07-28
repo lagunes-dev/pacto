@@ -27,13 +27,13 @@ export function PartnershipRoute() {
   const [announcement, setAnnouncement] = useState("");
   const errorRef = useRef<HTMLDivElement>(null);
   const mutations = [createInvite, acceptInvite, rejectInvite, cancelInvite, pause, end];
-  const error = mutations.find((item) => item.isError)?.error;
+  const error = partnership.error ?? mutations.find((item) => item.isError)?.error;
 
   useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
   const announce = (message: string) => { setAnnouncement(message); setCode(""); };
 
   if (partnership.isPending) return <p role="status">Cargando tu vínculo…</p>;
-  if (partnership.isError) return <div className="service-alert" role="alert">{neutralError}</div>;
+  if (partnership.isError) return <div ref={errorRef} tabIndex={-1} className="service-alert" role="alert">{neutralError}</div>;
   const current = partnership.data;
   const busy = mutations.some((item) => item.isPending);
 

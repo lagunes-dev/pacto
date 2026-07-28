@@ -72,6 +72,19 @@ describe("partnership routes", () => {
     expect(alert).toHaveFocus();
   });
 
+  it("announces an initial partnership query failure and moves focus for recovery", async () => {
+    const { first } = await twoUsers();
+    const unavailable: PartnershipRepository = {
+      ...first.partnership,
+      getMine: async () => { throw new Error("sensitive adapter failure"); },
+    };
+    renderRoute(first, "/partnership", unavailable);
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("La solicitud no está disponible");
+    expect(alert).not.toHaveTextContent("sensitive adapter failure");
+    expect(alert).toHaveFocus();
+  });
+
   it("updates only the signed-in person's preferences", async () => {
     const user = userEvent.setup();
     const { first, second } = await activeUsers();
