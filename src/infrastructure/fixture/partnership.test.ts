@@ -64,6 +64,11 @@ describe("two-user partnership fixture", () => {
     await activate(a, b);
     expect(await a.preferences.updateMine({ shareProgress: true })).toMatchObject({ shareProgress: true });
     expect(await b.preferences.getMine()).toMatchObject({ shareProgress: false });
+    await a.partnership.pause();
+    expect(await b.preferences.updateMine({ allowSupportRequests: false })).toMatchObject({ allowSupportRequests: false });
+    expect(await a.preferences.getMine()).toMatchObject({ shareProgress: true, allowSupportRequests: true });
+    await expect(a.preferences.updateMine({ shareProgress: false, ownerId: userB.id } as never)).rejects.toThrow();
+    expect(await b.preferences.getMine()).toMatchObject({ shareProgress: false, allowSupportRequests: false });
     expect(() => preferenceUpdateSchema.parse({ shareProgress: true, ownerId: userB.id, privateNote: "secret" })).toThrow();
   });
 
@@ -77,15 +82,21 @@ describe("two-user partnership fixture", () => {
     expect(() => createSupportRequestSchema.parse({ type: "check_in", privateNote: "secret", ownerId: userA.id })).toThrow();
   });
 
-  it("revokes support immediately on pause and keeps ended terminal", async () => {
+  it("revokes support immediately on pause and after termination", async () => {
     const { a, b } = setup();
     await activate(a, b);
-    await a.support.create("encouragement");
+    const pendingRequest = await a.support.create("encouragement");
+    const acknowledgedRequest = await a.support.create("practical_help");
+    await b.support.acknowledge(acknowledgedRequest.id);
     expect((await b.partnership.pause()).status).toBe("paused");
     await expect(a.support.list()).rejects.toThrow("Active partnership required");
     await expect(b.support.create("practical_help")).rejects.toThrow("Active partnership required");
     expect((await a.partnership.end()).status).toBe("ended");
     await expect(b.partnership.pause()).rejects.toThrow("Invalid partnership transition");
+    await expect(a.support.list()).rejects.toThrow("Active partnership required");
+    await expect(b.support.create("check_in")).rejects.toThrow("Active partnership required");
+    await expect(b.support.acknowledge(pendingRequest.id)).rejects.toThrow("Active partnership required");
+    await expect(b.support.close(acknowledgedRequest.id)).rejects.toThrow("Active partnership required");
   });
 
   it("returns DTO allow-lists without email, owner identity, notes, or metadata", async () => {
