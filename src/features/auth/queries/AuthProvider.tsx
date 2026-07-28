@@ -1,0 +1,41 @@
+import { createContext, useContext, useEffect, useMemo, useState, type PropsWithChildren } from "react";
+
+import type { AuthCredentials, Session } from "../model";
+import type { AuthPort } from "../port";
+
+type AuthState = {
+  session: Session | null;
+  isResolving: boolean;
+  register(credentials: AuthCredentials): Promise<void>;
+  login(credentials: AuthCredentials): Promise<void>;
+  logout(): Promise<void>;
+};
+
+const AuthContext = createContext<AuthState | null>(null);
+
+export function AuthProvider({ authPort, children }: PropsWithChildren<{ authPort: AuthPort }>) {
+  const [session, setSession] = useState<Session | null>(null);
+  const [isResolving, setResolving] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    authPort.getSession().then((next) => active && setSession(next)).finally(() => active && setResolving(false));
+    return () => { active = false; };
+  }, [authPort]);
+
+  const value = useMemo<AuthState>(() => ({
+    session,
+    isResolving,
+    register: async (credentials) => setSession(await authPort.register(credentials)),
+    login: async (credentials) => setSession(await authPort.login(credentials)),
+    logout: async () => { await authPort.logout(); setSession(null); },
+  }), [authPort, isResolving, session]);
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const value = useContext(AuthContext);
+  if (!value) throw new Error("useAuth must be used inside AuthProvider");
+  return value;
+}

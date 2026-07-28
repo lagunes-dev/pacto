@@ -8,9 +8,9 @@ import {
   App,
   NewHabitRoute,
   ProgressRoute,
-  RequireSession,
-  SignInRoute,
 } from "./App";
+import { AuthRoute } from "../features/auth/components/AuthRoute";
+import { RequireSession } from "../features/auth/components/RequireSession";
 
 export const appRoutes: RouteObject[] = [
   {
@@ -18,7 +18,8 @@ export const appRoutes: RouteObject[] = [
     element: <App />,
     children: [
       { index: true, element: <Navigate to="/sign-in" replace /> },
-      { path: "sign-in", element: <SignInRoute /> },
+      { path: "sign-in", element: <AuthRoute mode="login" /> },
+      { path: "register", element: <AuthRoute mode="register" /> },
       {
         element: <RequireSession />,
         children: [

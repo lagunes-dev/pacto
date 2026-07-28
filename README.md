@@ -1,6 +1,6 @@
 # Pacto
 
-Aplicación React, TypeScript y Vite en desarrollo. El estado actual incluye la base visual y las rutas iniciales; todavía no implementa autenticación ni persistencia de hábitos.
+Aplicación React, TypeScript y Vite en desarrollo. Incluye un límite de sesión, registro e inicio/cierre de sesión con fixture local de memoria exclusivamente para desarrollo, más contratos privados de hábitos y progreso.
 
 ## Requisitos
 
@@ -15,6 +15,8 @@ npm run dev
 
 Vite mostrará en la terminal la URL local de desarrollo.
 
+Copiá `.env.example` a `.env.local` para elegir el adaptador. `VITE_DATA_ADAPTER=fixture` funciona únicamente en desarrollo. Las variables públicas de Supabase definen un límite de configuración, pero NO existe todavía una integración Supabase activa o verificada.
+
 ## Verificación
 
 ```bash
@@ -28,23 +30,6 @@ El build de producción se genera en `dist/`.
 
 La demo estática anterior se conserva sin cambios en `reference/demo-original/`. Puede servirse desde esa carpeta mediante HTTP para consultar el diseño de referencia; no representa la implementación React actual.
 
-## Cambios principales
-
-- Check-in con tres estados semánticos: cumplido, hubo evento y sin registrar.
-- Captura contextual de detonantes sin contar calorías ni exigir fotografías.
-- Intervención inmediata cuando el antojo llega a 4 o 5.
-- Planes “si–entonces” y flujo de recuperación.
-- Solicitudes de apoyo que especifican lo que la persona necesita.
-- Sin porcentaje visible de la pareja ni promedio conjunto.
-- Metas compartidas basadas en cooperación.
-- Insights accionables y efectividad de alternativas.
-- Permisos de privacidad y límites de comunicación configurables.
-- Pausa del seguimiento compartido sin borrar historial personal.
-- Onboarding de vinculación consensuada.
-- Persistencia local para probar flujos.
-- Manifest, service worker e iconos para instalación como PWA.
-- Esquema Supabase con RLS en `supabase-schema.sql`.
-
 ## Alcance
 
-La implementación React actual es una base visual. La autenticación, la persistencia de hábitos, el progreso, la integración con Supabase y las capacidades PWA todavía no están implementadas ni verificadas.
+Los repositorios de hábitos/progreso obtienen el dueño desde la sesión: sus contratos no aceptan `ownerId` ni notas privadas. El fixture no persiste al recargar y no prueba autenticación real. Partner linking, vistas compartidas, Realtime, push, cola offline, despliegue, persistencia real, RLS, Supabase y capacidades PWA siguen fuera del alcance y no están verificadas.
