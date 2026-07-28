@@ -5,7 +5,7 @@ import { authCredentialsSchema, type AuthCredentials } from "../model";
 import { useAuth } from "../queries/AuthProvider";
 
 export function AuthRoute({ mode }: { mode: "login" | "register" }) {
-  const { session, isResolving, login, register } = useAuth();
+  const { session, isResolving, sessionError, login, register } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [values, setValues] = useState<AuthCredentials>({ email: "", password: "" });
@@ -15,6 +15,7 @@ export function AuthRoute({ mode }: { mode: "login" | "register" }) {
 
   if (isResolving) return <p role="status">Comprobando sesión…</p>;
   if (session) return <Navigate to="/progress" replace />;
+  if (sessionError) return <p className="field-error" role="alert">Autenticación no disponible: {sessionError}</p>;
 
   async function submit(event: FormEvent) {
     event.preventDefault();

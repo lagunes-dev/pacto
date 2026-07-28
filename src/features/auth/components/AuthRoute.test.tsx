@@ -6,6 +6,7 @@ import { RouterProvider } from "react-router/dom";
 import { AppProviders } from "../../../app/providers";
 import { appRoutes } from "../../../app/router";
 import { createFixtureServices } from "../../../infrastructure/fixture/services";
+import type { AuthPort } from "../port";
 
 function renderAuth() {
   const router = createMemoryRouter(appRoutes, { initialEntries: ["/register"] });
@@ -39,5 +40,20 @@ describe("authentication boundary", () => {
     await user.click(screen.getByRole("button", { name: "Registrarme" }));
     expect(email).toHaveValue("not-an-email");
     expect(email).toHaveAccessibleDescription("Ingresá un correo válido.");
+  });
+
+  it("reports an unavailable auth boundary when the initial session lookup rejects", async () => {
+    const unavailableAuth: AuthPort = {
+      getSession: () => Promise.reject(new Error("Falta la configuración pública de Supabase.")),
+      register: () => Promise.reject(new Error("Unavailable")),
+      login: () => Promise.reject(new Error("Unavailable")),
+      logout: () => Promise.reject(new Error("Unavailable")),
+    };
+    const router = createMemoryRouter(appRoutes, { initialEntries: ["/sign-in"] });
+
+    render(<AppProviders authPort={unavailableAuth}><RouterProvider router={router} /></AppProviders>);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Autenticación no disponible: Falta la configuración pública de Supabase.");
+    expect(screen.queryByRole("button", { name: "Iniciar sesión" })).not.toBeInTheDocument();
   });
 });
