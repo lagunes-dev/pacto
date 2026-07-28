@@ -24,6 +24,19 @@ npm test
 npm run build
 ```
 
+Las pruebas actuales se ejecutan con Vitest/jsdom e incluyen el flujo completo de rutas privadas, creación por teclado, anuncios accesibles, reintento y estados de servicio no disponible. No hay un navegador E2E configurado: `tests/e2e/private-habit-flow.spec.ts` queda pendiente hasta incorporar ese tooling, por lo que estas pruebas no constituyen evidencia visual ni de tecnologías de asistencia reales.
+
+## Flujo disponible
+
+- `/sign-in` y `/register`: autenticación de desarrollo.
+- `/habits/new`: ruta protegida para crear, listar, editar y eliminar hábitos privados.
+- `/progress`: ruta protegida para progreso personal basado solamente en datos persistidos por el adaptador activo.
+- Sin sesión, las rutas privadas redirigen a `/sign-in`.
+
+El modo fixture conserva usuarios y datos únicamente en memoria durante la ejecución. Recargar la aplicación elimina ese estado. Cuando el servicio configurado no está implementado o falla, la interfaz informa que no se guardaron cambios, conserva los valores seguros y permite reintentar donde corresponde.
+
+La arquitectura y los límites de reemplazo de adaptadores se documentan en [`docs/first-vertical-slice.md`](docs/first-vertical-slice.md).
+
 El build de producción se genera en `dist/`.
 
 ## Demo original
