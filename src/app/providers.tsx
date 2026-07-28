@@ -5,22 +5,31 @@ import type { AuthPort } from "../features/auth/port";
 import { AuthProvider } from "../features/auth/queries/AuthProvider";
 import type { HabitRepository } from "../features/habits/repository";
 import type { ProgressRepository } from "../features/progress/repository";
+import type { PartnershipRepository } from "../features/partnership/repository";
+import type { PreferenceRepository } from "../features/preferences/repository";
+import type { SupportRepository } from "../features/support/repository";
 import { createAppServices, type AppServices } from "../infrastructure";
 
 type ProviderOverrides = {
   authPort?: AuthPort;
   habitRepository?: HabitRepository;
   progressRepository?: ProgressRepository;
+  partnershipRepository?: PartnershipRepository;
+  preferenceRepository?: PreferenceRepository;
+  supportRepository?: SupportRepository;
 };
 
-const RepositoryContext = createContext<Pick<AppServices, "habits" | "progress"> | null>(null);
+const RepositoryContext = createContext<Omit<AppServices, "auth"> | null>(null);
 
-export function AppProviders({ children, authPort, habitRepository, progressRepository }: PropsWithChildren<ProviderOverrides>) {
+export function AppProviders({ children, authPort, habitRepository, progressRepository, partnershipRepository, preferenceRepository, supportRepository }: PropsWithChildren<ProviderOverrides>) {
   const [services] = useState(() => createAppServices());
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
   const repositories = {
     habits: habitRepository ?? services.habits,
     progress: progressRepository ?? services.progress,
+    partnership: partnershipRepository ?? services.partnership,
+    preferences: preferenceRepository ?? services.preferences,
+    support: supportRepository ?? services.support,
   };
 
   return (

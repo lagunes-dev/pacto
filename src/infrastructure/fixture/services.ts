@@ -3,9 +3,14 @@ import type { HabitRepository } from "../../features/habits/repository";
 import type { AuthCredentials, Session } from "../../features/auth/model";
 import type { AuthPort } from "../../features/auth/port";
 import type { ProgressRepository } from "../../features/progress/repository";
+import type { PartnershipRepository } from "../../features/partnership/repository";
+import type { PreferenceRepository } from "../../features/preferences/repository";
+import type { SupportRepository } from "../../features/support/repository";
+import { createPartnershipFixture } from "./partnership";
 
-type Account = { id: string; email: string; password: string };
-export type FixtureStore = { accounts: Account[]; habits: Habit[] };
+type Account = { id: string; email: string; password: string; displayName: string };
+type PartnershipFixture = ReturnType<typeof createPartnershipFixture>;
+export type FixtureStore = { accounts: Account[]; habits: Habit[]; partnershipFixture?: PartnershipFixture };
 
 export function createFixtureStore(): FixtureStore {
   return { accounts: [], habits: [] };
@@ -23,7 +28,7 @@ export function createFixtureServices(store = createFixtureStore()) {
     async register(credentials: AuthCredentials) {
       const email = credentials.email.trim().toLowerCase();
       if (store.accounts.some((account) => account.email === email)) throw new Error("Ese correo ya está registrado.");
-      const account = { id: crypto.randomUUID(), email, password: credentials.password };
+      const account = { id: crypto.randomUUID(), email, password: credentials.password, displayName: email.split("@")[0] };
       store.accounts.push(account);
       return (session = { user: { id: account.id, email } });
     },
@@ -63,5 +68,31 @@ export function createFixtureServices(store = createFixtureStore()) {
     async getMine() { return { habits: await habits.listMine(), completedEntryCount: 0, activeDayCount: 0 }; },
   };
 
-  return { auth, habits, progress };
+  const consentServices = () => {
+    const ownerId = requireOwner();
+    if (store.accounts.length < 2) throw new Error("Partnership fixture unavailable.");
+    store.partnershipFixture ??= createPartnershipFixture({ users: [store.accounts[0], store.accounts[1]] });
+    return store.partnershipFixture.forUser(ownerId);
+  };
+  const partnership: PartnershipRepository = {
+    async getMine() { return consentServices().partnership.getMine(); },
+    async createInvite(email) { return consentServices().partnership.createInvite(email); },
+    async acceptInvite(code) { return consentServices().partnership.acceptInvite(code); },
+    async rejectInvite(code) { return consentServices().partnership.rejectInvite(code); },
+    async cancelInvite() { return consentServices().partnership.cancelInvite(); },
+    async pause() { return consentServices().partnership.pause(); },
+    async end() { return consentServices().partnership.end(); },
+  };
+  const preferences: PreferenceRepository = {
+    async getMine() { return consentServices().preferences.getMine(); },
+    async updateMine(input) { return consentServices().preferences.updateMine(input); },
+  };
+  const support: SupportRepository = {
+    async list() { return consentServices().support.list(); },
+    async create(type) { return consentServices().support.create(type); },
+    async acknowledge(id) { return consentServices().support.acknowledge(id); },
+    async close(id) { return consentServices().support.close(id); },
+  };
+
+  return { auth, habits, progress, partnership, preferences, support };
 }

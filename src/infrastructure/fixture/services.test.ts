@@ -38,5 +38,25 @@ describe("development fixture privacy contracts", () => {
     const services = createFixtureServices();
     await expect(services.habits.listMine()).rejects.toThrow("Authentication required");
     await expect(services.progress.getMine()).rejects.toThrow("Authentication required");
+    await expect(services.partnership.getMine()).rejects.toThrow("Authentication required");
+  });
+
+  it("wires identity-bound consent services and denies support immediately after pause", async () => {
+    const store = createFixtureStore();
+    const a = createFixtureServices(store);
+    const b = createFixtureServices(store);
+    const sessionA = await a.auth.register(ownerA);
+    await b.auth.register(ownerB);
+
+    const invite = await a.partnership.createInvite(ownerB.email);
+    await b.partnership.acceptInvite(invite.code);
+    const request = await a.support.create("check_in");
+
+    expect(await b.support.list()).toEqual([{ ...request, requestedBy: "partner" }]);
+    expect(JSON.stringify(await a.partnership.getMine())).not.toMatch(/notes|habits|summary|email/i);
+    await b.partnership.pause();
+    await expect(a.support.list()).rejects.toThrow("Active partnership required");
+    expect(await a.preferences.getMine()).toMatchObject({ shareProgress: false, allowSupportRequests: true });
+    expect(sessionA.user.id).not.toBe((await b.auth.getSession())?.user.id);
   });
 });
