@@ -39,6 +39,17 @@ insert into public.support_requests (id, requester_id, partnership_id, support_t
 values ('60000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', 'check-in')
 on conflict (id) do nothing;
 
+do $$
+begin
+  begin
+    insert into public.shared_daily_summaries (daily_entry_id, owner_id)
+    values ('40000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002');
+    raise exception 'ownership-linked summary accepted a mismatched owner';
+  exception when foreign_key_violation then
+    null;
+  end;
+end $$;
+
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000003', true);
 do $$

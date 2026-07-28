@@ -140,6 +140,9 @@ create table if not exists public.shared_daily_summaries (
   updated_at timestamptz not null default now()
 );
 
+create unique index if not exists daily_entries_id_user_idx
+  on public.daily_entries (id, user_id);
+
 do $$
 begin
   if not exists (select 1 from pg_constraint where conrelid = 'public.partnerships'::regclass and conname = 'partnerships_active_requires_invitee') then
@@ -158,10 +161,15 @@ begin
     alter table public.shared_daily_summaries add constraint summaries_percentage_range
       check (percentage between 0 and 100) not valid;
   end if;
+  if not exists (select 1 from pg_constraint where conrelid = 'public.shared_daily_summaries'::regclass and conname = 'shared_daily_summaries_entry_owner_fk') then
+    alter table public.shared_daily_summaries add constraint shared_daily_summaries_entry_owner_fk
+      foreign key (daily_entry_id, owner_id) references public.daily_entries(id, user_id) on delete cascade not valid;
+  end if;
   alter table public.partnerships validate constraint partnerships_active_requires_invitee;
   alter table public.support_requests validate constraint support_requests_type_length;
   alter table public.shared_daily_summaries validate constraint summaries_craving_range;
   alter table public.shared_daily_summaries validate constraint summaries_percentage_range;
+  alter table public.shared_daily_summaries validate constraint shared_daily_summaries_entry_owner_fk;
 end $$;
 
 create unique index if not exists one_active_partnership_per_inviter
