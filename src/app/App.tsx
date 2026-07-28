@@ -1,4 +1,4 @@
-import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router";
 
 import { AppShell } from "../shared/ui/AppShell";
 import { appConfig } from "./config";

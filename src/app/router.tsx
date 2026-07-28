@@ -2,7 +2,7 @@ import {
   createBrowserRouter,
   Navigate,
   type RouteObject,
-} from "react-router-dom";
+} from "react-router";
 
 import {
   App,

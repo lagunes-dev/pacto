@@ -1,5 +1,5 @@
 import type { PropsWithChildren, ReactNode } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation } from "react-router";
 
 import { appConfig } from "../../app/config";
 
