@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 const required = [
   "SUPABASE_TEST_URL",
@@ -20,8 +21,13 @@ if (missing.length) {
 }
 
 const result = spawnSync(
-  process.platform === "win32" ? "npm.cmd" : "npm",
-  ["exec", "--", "vitest", "run", "--config", "vitest.live.config.ts"],
+  process.execPath,
+  [
+    fileURLToPath(new URL("../node_modules/vitest/vitest.mjs", import.meta.url)),
+    "run",
+    "--config",
+    "vitest.live.config.ts",
+  ],
   { stdio: "inherit", env: process.env },
 );
 if (result.error) {
