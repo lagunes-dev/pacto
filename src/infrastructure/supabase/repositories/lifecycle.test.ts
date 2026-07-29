@@ -104,7 +104,7 @@ describe("Supabase partnership and support repositories", () => {
       updatedAt: row.created_at,
     }]);
     expect(operations.find((operation) => operation.action === "select")?.value)
-      .toBe("id,requester_id,support_type,status,created_at,acknowledged_at");
+      .toBe("id,requester_id,support_type,status,created_at,acknowledged_at,closed_at");
   });
 
   it("treats an RLS-empty support read as immediate revocation and never creates alerts", async () => {
@@ -130,6 +130,7 @@ describe("Supabase partnership and support repositories", () => {
   it("uses support RPC response allow-lists without private notes or automatic alerts", async () => {
     const created = {
       support_request_id: "request-1",
+      requester_id: "user-a",
       support_type: "practical_help",
       support_status: "pending",
       created_at: "2026-07-29T10:00:00Z",
@@ -201,5 +202,17 @@ describe("Supabase partnership and support repositories", () => {
     const { support } = createSupabaseLifecycleRepositories(client);
 
     await expect(support.acknowledge("request-1")).rejects.toThrow("Support request response was incomplete");
+  });
+
+  it("rejects an incomplete support creation response", async () => {
+    const { client } = createClient({
+      "rpc:create_support_request": [{
+        data: [{ support_request_id: "request-1", support_type: "check_in", support_status: "pending" }],
+        error: null,
+      }],
+    });
+    const { support } = createSupabaseLifecycleRepositories(client);
+
+    await expect(support.create("check_in")).rejects.toThrow("Support request response was incomplete");
   });
 });

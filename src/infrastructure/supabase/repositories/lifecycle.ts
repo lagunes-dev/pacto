@@ -28,19 +28,27 @@ type PartnershipStateRow = {
 };
 type InviteRow = { invite_code: string; partnership_status: "pending"; created_at: string };
 type ProfileRow = { id: string; display_name: string };
-type SupportRow = {
-  support_request_id?: string;
-  id?: string;
-  requester_id?: string;
-  support_type?: SupportType;
-  support_status?: SupportStatus;
-  status?: SupportStatus;
+type SupportTableRow = {
+  id: string;
+  requester_id: string;
+  support_type: SupportType;
+  status: SupportStatus;
   created_at: string;
   acknowledged_at: string | null;
+  closed_at: string | null;
+};
+type SupportRpcRow = {
+  support_request_id: string;
+  requester_id: string;
+  support_type: SupportType;
+  support_status: SupportStatus;
+  created_at: string;
+  acknowledged_at: string | null;
+  closed_at: string | null;
 };
 
 const profileColumns = "id,display_name";
-const supportColumns = "id,requester_id,support_type,status,created_at,acknowledged_at";
+const supportColumns = "id,requester_id,support_type,status,created_at,acknowledged_at,closed_at";
 
 function failure(error: DatabaseError, fallback: string): Error {
   return new Error(error?.message?.trim() || fallback);
@@ -65,18 +73,19 @@ async function actorId(client: LifecycleClient): Promise<string> {
   return data.user.id;
 }
 
-function mapSupport(row: SupportRow, viewerId: string, requestedBy?: "me" | "partner"): SupportRequestView {
-  const id = row.support_request_id ?? row.id;
+function mapSupport(row: SupportTableRow | SupportRpcRow, viewerId: string, requestedBy?: "me" | "partner"): SupportRequestView {
+  const rpcRow = "support_request_id" in row;
+  const id = rpcRow ? row.support_request_id : row.id;
   const type = row.support_type;
-  const status = row.support_status ?? row.status;
-  if (!id || !type || !status) throw new Error("Support request response was incomplete.");
+  const status = rpcRow ? row.support_status : row.status;
+  if (!id || !type || !status || !row.requester_id || !row.created_at) throw new Error("Support request response was incomplete.");
   return {
     id,
     type,
     status,
     requestedBy: requestedBy ?? (row.requester_id === viewerId ? "me" : "partner"),
     createdAt: row.created_at,
-    updatedAt: row.acknowledged_at ?? row.created_at,
+    updatedAt: row.closed_at ?? row.acknowledged_at ?? row.created_at,
   };
 }
 
@@ -149,12 +158,12 @@ export function createSupabaseLifecycleRepositories(client: LifecycleClient): {
     async list() {
       const viewerId = await actorId(client);
       const result = await client.from("support_requests").select(supportColumns).order("created_at", { ascending: false });
-      return rows<SupportRow>(result, "Support requests are unavailable.").map((row) => mapSupport(row, viewerId));
+      return rows<SupportTableRow>(result, "Support requests are unavailable.").map((row) => mapSupport(row, viewerId));
     },
     async create(type) {
       const viewerId = await actorId(client);
       const safe = createSupportRequestSchema.parse({ type });
-      const row = first<SupportRow>(
+      const row = first<SupportRpcRow>(
         await client.rpc("create_support_request", { request_type: safe.type }),
         "Support request creation failed.",
       );
@@ -162,7 +171,7 @@ export function createSupabaseLifecycleRepositories(client: LifecycleClient): {
     },
     async acknowledge(id) {
       const viewerId = await actorId(client);
-      const row = first<SupportRow>(
+      const row = first<SupportRpcRow>(
         await client.rpc("acknowledge_support_request", { request_id: id }),
         "Support request acknowledgement failed.",
       );
@@ -170,7 +179,7 @@ export function createSupabaseLifecycleRepositories(client: LifecycleClient): {
     },
     async close(id) {
       const viewerId = await actorId(client);
-      const row = first<SupportRow>(
+      const row = first<SupportRpcRow>(
         await client.rpc("close_support_request", { request_id: id }),
         "Support request closure failed.",
       );

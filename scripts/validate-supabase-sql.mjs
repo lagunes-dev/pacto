@@ -7,9 +7,13 @@ const migrationPaths = [
   "supabase/migrations/202607280001_authorization_schema.sql",
   "supabase/migrations/202607280002_rls_policies.sql",
   "supabase/migrations/202607280003_lifecycle_rpcs.sql",
+  "supabase/migrations/202607290001_support_rpc_response_compatibility.sql",
+  "supabase/migrations/202607290002_support_rpc_full_response.sql",
 ];
 const migrations = migrationPaths.map((path) => readFileSync(`${root}/${path}`, "utf8"));
 const [schema, policies, lifecycle] = migrations;
+const compatibility = migrations[3];
+const fullResponse = migrations[4];
 const rollbackPath = "supabase/rollback/202607280003_fail_closed_authorization.sql";
 const rollback = readFileSync(`${root}/${rollbackPath}`, "utf8");
 const runtimeTestPaths = [
@@ -50,6 +54,11 @@ const assertions = [
   [lifecycle.includes("private.active_partnership_id()") && lifecycle.includes("p.status = 'active'"), "support creation requires active membership"],
   [lifecycle.includes("actor_id <> r.requester_id") && lifecycle.includes("r.status = 'acknowledged'"), "support transitions require the other member and valid state"],
   [lifecycle.includes("requester_id uuid") && lifecycle.includes("support_type text") && (lifecycle.match(/support_request_id uuid/g) ?? []).length >= 3, "support write RPCs return the complete safe DTO source fields"],
+  [compatibility.includes("drop function if exists public.acknowledge_support_request(uuid)") && compatibility.includes("requester_id uuid") && compatibility.includes("support_type text"), "forward compatibility migration replaces already-recorded support RPC signatures"],
+  [fullResponse.includes("add column if not exists closed_at timestamptz") && (fullResponse.match(/closed_at timestamptz/g) ?? []).length >= 3, "full support response migration adds an idempotent closed timestamp and DTO field"],
+  [fullResponse.includes("set status = 'closed', closed_at = clock_timestamp()") && fullResponse.includes("set search_path = ''"), "closed support transitions persist the close timestamp with a fixed search path"],
+  [lifecycleRpcs.slice(-3).every((rpc) => fullResponse.includes(`grant execute on function public.${rpc} to authenticated`)), "full response migration preserves explicit authenticated support RPC grants"],
+  [migrationPaths.indexOf("supabase/migrations/202607290001_support_rpc_response_compatibility.sql") > migrationPaths.indexOf("supabase/migrations/202607280003_lifecycle_rpcs.sql"), "compatibility migration runs after lifecycle RPCs"],
   [lifecycle.includes("revoke all on function private.require_actor()") && !/grant execute on function private\./i.test(lifecycle), "private helpers are not executable by browser roles"],
   [lifecycle.includes("revoke insert, update, delete on public.partnerships") && lifecycle.includes("revoke insert, update, delete on public.support_requests"), "direct lifecycle table mutation remains revoked"],
   [lifecycleRpcs.every((rpc) => lifecycle.includes(`grant execute on function public.${rpc} to authenticated`)), "every public lifecycle RPC has a named authenticated grant"],
