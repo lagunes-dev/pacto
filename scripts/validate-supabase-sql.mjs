@@ -10,6 +10,8 @@ const migrationPaths = [
 ];
 const migrations = migrationPaths.map((path) => readFileSync(`${root}/${path}`, "utf8"));
 const [schema, policies, lifecycle] = migrations;
+const rollbackPath = "supabase/rollback/202607280003_fail_closed_authorization.sql";
+const rollback = readFileSync(`${root}/${rollbackPath}`, "utf8");
 const runtimeTestPaths = [
   "supabase/tests/authorization_rls.sql",
   "supabase/tests/lifecycle_rpcs.sql",
@@ -53,6 +55,9 @@ const assertions = [
   [!lifecycle.includes("private_notes") && !lifecycle.includes("invitee_email"), "RPC return contracts expose no private notes or invitee email"],
   [runtimeAssertions.includes("intruder accepted another user invite") && runtimeAssertions.includes("requester acknowledged their own support request"), "runtime suite covers forbidden lifecycle transitions"],
   [runtimeAssertions.includes("direct partnership identity mutation was allowed") && runtimeAssertions.includes("partnership lifecycle identity changed"), "runtime suite covers immutable lifecycle identity"],
+  [protectedTables.every((table) => rollback.includes(`'${table}'`)) && rollback.includes("force row level security"), "rollback preserves forced RLS for every protected table"],
+  [lifecycleRpcs.every((rpc) => rollback.includes(`revoke all on function public.${rpc}`)), "rollback revokes every public lifecycle RPC"],
+  [!/^\s*(drop|truncate|delete)\b/im.test(rollback) && !rollback.includes("disable row level security"), "rollback retains data, schema, and RLS"],
 ];
 
 const failures = assertions.filter(([passed]) => !passed).map(([, message]) => message);
