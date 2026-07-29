@@ -232,7 +232,10 @@ as $$
     p.created_at
   from public.partnerships p
   where private.require_actor() in (p.inviter_id, p.invitee_id)
-  order by p.created_at desc
+  order by (p.status <> 'ended') desc,
+    p.accepted_at desc nulls last,
+    p.created_at desc,
+    p.id desc
   limit 1
 $$;
 

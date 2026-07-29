@@ -87,11 +87,14 @@ end $$;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '11000000-0000-0000-0000-000000000002', true);
-select * from public.accept_partnership_invite(current_setting('pacto.test.invite_code'));
+select set_config('pacto.test.partnership_id', accepted_invite.partnership_id::text, true)
+from public.accept_partnership_invite(current_setting('pacto.test.invite_code')) accepted_invite;
 do $$ begin
   if not exists (
     select 1 from public.get_my_partnership_state() s
-    where s.partnership_status = 'active'
+    where s.partnership_id = current_setting('pacto.test.partnership_id')::uuid
+      and s.partnership_status = 'active'
+      and s.member_role = 'invitee'
       and s.partner_id = '11000000-0000-0000-0000-000000000001'
   ) then raise exception 'accepted member cannot read safe partnership state'; end if;
 end $$;
