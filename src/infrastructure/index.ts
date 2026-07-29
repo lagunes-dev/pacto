@@ -5,7 +5,9 @@ import type { PartnershipRepository } from "../features/partnership/repository";
 import type { PreferenceRepository } from "../features/preferences/repository";
 import type { SupportRepository } from "../features/support/repository";
 import { createFixtureServices } from "./fixture/services";
-import { createSupabaseAuthBoundary, createUnavailableAuthPort } from "./supabase/auth";
+import { createSupabaseAuthPort, createUnavailableAuthPort } from "./supabase/auth";
+import { createSupabaseBrowserClient, isSupabaseConfigured } from "./supabase/client";
+import { asPrivateDataClient, createSupabasePrivateRepositories } from "./supabase/repositories/private";
 
 export type AppServices = {
   auth: AuthPort;
@@ -35,9 +37,22 @@ function readEnvironment(): AppEnvironment {
 export function createAppServices(environment = readEnvironment()): AppServices {
   if (environment.adapter === "fixture" && environment.isDevelopment) return createFixtureServices();
 
-  const auth = environment.adapter === "supabase"
-    ? createSupabaseAuthBoundary({ url: environment.supabaseUrl, publishableKey: environment.supabasePublishableKey })
-    : createUnavailableAuthPort(new Error(environment.adapter === "fixture"
+  const config = { url: environment.supabaseUrl, publishableKey: environment.supabasePublishableKey };
+  if (environment.adapter === "supabase" && isSupabaseConfigured(config)) {
+    const client = createSupabaseBrowserClient(config);
+    const privateRepositories = createSupabasePrivateRepositories(asPrivateDataClient(client));
+    const unavailable = async (): Promise<never> => { throw new Error("El servicio de datos no está disponible. No se guardaron cambios."); };
+    return {
+      auth: createSupabaseAuthPort(client),
+      ...privateRepositories,
+      partnership: { getMine: unavailable, createInvite: unavailable, acceptInvite: unavailable, rejectInvite: unavailable, cancelInvite: unavailable, pause: unavailable, end: unavailable },
+      support: { list: unavailable, create: unavailable, acknowledge: unavailable, close: unavailable },
+    };
+  }
+
+  const auth = createUnavailableAuthPort(new Error(environment.adapter === "supabase"
+    ? "Falta configurar el límite público de Supabase. No se guardaron cambios."
+    : environment.adapter === "fixture"
       ? "El fixture está deshabilitado fuera de desarrollo. No se guardaron cambios."
       : "No hay un adaptador de datos disponible. No se guardaron cambios."));
   const unavailable = async (): Promise<never> => {

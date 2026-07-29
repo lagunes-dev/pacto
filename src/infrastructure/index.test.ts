@@ -13,6 +13,8 @@ describe("unavailable production consent services", () => {
     const services = createAppServices(environment());
 
     await expect(services.auth.getSession()).rejects.toThrow("Falta configurar");
+    await expect(services.habits.listMine()).rejects.toThrow("no está disponible");
+    await expect(services.progress.getMine()).rejects.toThrow("no está disponible");
     await expect(services.partnership.getMine()).rejects.toThrow("no está disponible");
     await expect(services.preferences.getMine()).rejects.toThrow("no está disponible");
     await expect(services.support.list()).rejects.toThrow("no está disponible");
