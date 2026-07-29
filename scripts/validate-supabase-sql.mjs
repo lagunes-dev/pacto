@@ -43,6 +43,7 @@ const assertions = [
   [schema.includes("create table if not exists") && schema.includes("create index if not exists"), "schema creation is rerunnable"],
   [policies.includes("drop policy if exists"), "policy replacement is rerunnable"],
   [(lifecycle.match(/security definer/g) ?? []).length === (lifecycle.match(/set search_path = ''/g) ?? []).length, "every security-definer lifecycle function fixes its search path"],
+  [lifecycle.includes("extensions.gen_random_bytes(18)") && !/(?<!\.)\bgen_random_bytes\s*\(/.test(lifecycle), "pgcrypto calls use the installed extensions schema"],
   [lifecycle.includes("auth.uid()") && lifecycle.includes("private.require_actor()"), "lifecycle identity is derived from auth.uid()"],
   [lifecycle.includes("private.active_partnership_id()") && lifecycle.includes("p.status = 'active'"), "support creation requires active membership"],
   [lifecycle.includes("actor_id <> r.requester_id") && lifecycle.includes("r.status = 'acknowledged'"), "support transitions require the other member and valid state"],

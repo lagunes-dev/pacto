@@ -81,7 +81,7 @@ begin
 
   return query
   insert into public.partnerships (inviter_id, invitee_id, invite_code, status)
-  values (actor_id, target_id, encode(gen_random_bytes(18), 'hex'), 'pending')
+  values (actor_id, target_id, encode(extensions.gen_random_bytes(18), 'hex'), 'pending')
   returning partnerships.id, partnerships.invite_code, partnerships.status, partnerships.created_at;
 exception
   when unique_violation then
