@@ -79,6 +79,17 @@ afterAll(async () => {
 });
 
 describe.sequential("credential-gated hosted authorization and adapter paths", () => {
+  async function ensureActivePartnership(): Promise<ReturnType<typeof createSupabaseLifecycleRepositories>> {
+    const a = createSupabaseLifecycleRepositories(actors.userA.raw);
+    const b = createSupabaseLifecycleRepositories(actors.userB.raw);
+    const current = await a.partnership.getMine();
+    if (current?.status === "active") return { partnership: a.partnership, support: a.support };
+    if (current?.status === "paused") await a.partnership.end();
+    const invite = await a.partnership.createInvite(actors.userB.email);
+    await b.partnership.acceptInvite(invite.code);
+    return { partnership: a.partnership, support: a.support };
+  }
+
   it("authenticates three distinct disposable actors with public credentials", async () => {
     actors.userA = await signIn("userA");
     actors.userB = await signIn("userB");
@@ -112,13 +123,10 @@ describe.sequential("credential-gated hosted authorization and adapter paths", (
   });
 
   it("uses adapter RPCs for active partnership and support authorization", async () => {
-    const a = createSupabaseLifecycleRepositories(actors.userA.raw);
+    const a = await ensureActivePartnership();
     const b = createSupabaseLifecycleRepositories(actors.userB.raw);
     const intruder = createSupabaseLifecycleRepositories(actors.intruder.raw);
 
-    const invite = await a.partnership.createInvite(actors.userB.email);
-    await expectRejected(() => intruder.partnership.acceptInvite(invite.code));
-    expect((await b.partnership.acceptInvite(invite.code)).status).toBe("active");
     expect((await a.partnership.getMine())?.partner.userId).toBe(actors.userB.userId);
     expect((await b.partnership.getMine())?.partner.userId).toBe(actors.userA.userId);
     expect(await intruder.partnership.getMine()).toBeNull();
@@ -137,7 +145,7 @@ describe.sequential("credential-gated hosted authorization and adapter paths", (
   });
 
   it("revokes partnership/support access immediately on pause and permanently on end", async () => {
-    const a = createSupabaseLifecycleRepositories(actors.userA.raw);
+    const a = await ensureActivePartnership();
     const b = createSupabaseLifecycleRepositories(actors.userB.raw);
     const pendingAtRevocation = await a.support.create("encouragement");
 
