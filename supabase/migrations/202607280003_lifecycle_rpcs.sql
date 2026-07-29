@@ -43,6 +43,7 @@ begin
 end;
 $$;
 
+drop function if exists public.create_partnership_invite(text);
 create or replace function public.create_partnership_invite(target_email text)
 returns table (
   partnership_id uuid,
