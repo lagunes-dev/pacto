@@ -26,7 +26,7 @@ type PartnershipStateRow = {
   accepted_at: string | null;
   created_at: string;
 };
-type InviteRow = { invite_code: string; partnership_status: "pending"; created_at: string };
+type InviteRow = { invite_code: string; partnership_status: "pending"; expires_at: string };
 type ProfileRow = { id: string; display_name: string };
 type SupportTableRow = {
   id: string;
@@ -125,7 +125,7 @@ export function createSupabaseLifecycleRepositories(client: LifecycleClient): {
       return {
         code: row.invite_code,
         status: row.partnership_status,
-        expiresAt: new Date(new Date(row.created_at).getTime() + 86_400_000).toISOString(),
+        expiresAt: row.expires_at,
       } satisfies InviteView;
     },
     async acceptInvite(code) {

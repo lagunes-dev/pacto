@@ -66,13 +66,17 @@ describe("Supabase partnership and support repositories", () => {
   it("uses only hardened RPCs for lifecycle writes", async () => {
     const paused = { ...activeState, partnership_status: "paused", accepted_at: "2026-07-29T10:05:00Z" };
     const { client, operations } = createClient({
-      "rpc:create_partnership_invite": [{ data: [{ invite_code: "safe-code", partnership_status: "pending", created_at: "2026-07-29T10:00:00Z" }], error: null }],
+      "rpc:create_partnership_invite": [{ data: [{ invite_code: "safe-code", partnership_status: "pending", expires_at: "2026-07-30T10:00:00Z" }], error: null }],
       "rpc:pause_partnership": [{ data: [{ partnership_id: "partnership-1", partnership_status: "paused" }], error: null }],
       "rpc:get_my_partnership_state": [{ data: [paused], error: null }],
     });
     const { partnership } = createSupabaseLifecycleRepositories(client);
 
-    await expect(partnership.createInvite(" invitee@example.test ")).resolves.toMatchObject({ code: "safe-code", status: "pending" });
+    await expect(partnership.createInvite(" invitee@example.test ")).resolves.toMatchObject({
+      code: "safe-code",
+      status: "pending",
+      expiresAt: "2026-07-30T10:00:00Z",
+    });
     await expect(partnership.pause()).resolves.toMatchObject({ status: "paused", partner: { displayName: "Partner" } });
     expect(operations.filter((operation) => operation.boundary === "rpc").map(({ name, value }) => ({ name, value }))).toEqual([
       { name: "create_partnership_invite", value: { target_email: "invitee@example.test" } },

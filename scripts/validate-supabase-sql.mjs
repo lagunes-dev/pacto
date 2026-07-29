@@ -9,11 +9,13 @@ const migrationPaths = [
   "supabase/migrations/202607280003_lifecycle_rpcs.sql",
   "supabase/migrations/202607290001_support_rpc_response_compatibility.sql",
   "supabase/migrations/202607290002_support_rpc_full_response.sql",
+  "supabase/migrations/202607290003_lifecycle_rpc_contracts.sql",
 ];
 const migrations = migrationPaths.map((path) => readFileSync(`${root}/${path}`, "utf8"));
 const [schema, policies, lifecycle] = migrations;
 const compatibility = migrations[3];
 const fullResponse = migrations[4];
+const finalContracts = migrations[5];
 const rollbackPath = "supabase/rollback/202607280003_fail_closed_authorization.sql";
 const rollback = readFileSync(`${root}/${rollbackPath}`, "utf8");
 const runtimeTestPaths = [
@@ -57,6 +59,9 @@ const assertions = [
   [compatibility.includes("drop function if exists public.acknowledge_support_request(uuid)") && compatibility.includes("requester_id uuid") && compatibility.includes("support_type text"), "forward compatibility migration replaces already-recorded support RPC signatures"],
   [fullResponse.includes("add column if not exists closed_at timestamptz") && (fullResponse.match(/closed_at timestamptz/g) ?? []).length >= 3, "full support response migration adds an idempotent closed timestamp and DTO field"],
   [fullResponse.includes("set status = 'closed', closed_at = clock_timestamp()") && fullResponse.includes("set search_path = ''"), "closed support transitions persist the close timestamp with a fixed search path"],
+  [finalContracts.includes("drop function if exists public.create_partnership_invite(text)") && finalContracts.includes("expires_at timestamptz") && finalContracts.includes("join public.profiles"), "final invite migration replaces the exact signature and requires a profiled target"],
+  [finalContracts.includes("drop function if exists public.create_support_request(text)") && (finalContracts.match(/closed_at timestamptz/g) ?? []).length >= 3, "final support migration replaces the exact overload with the complete DTO"],
+  [finalContracts.includes("set search_path = ''") && finalContracts.includes("grant execute on function public.create_partnership_invite(text) to authenticated"), "final lifecycle migration hardens search paths and authenticated grants"],
   [lifecycleRpcs.slice(-3).every((rpc) => fullResponse.includes(`grant execute on function public.${rpc} to authenticated`)), "full response migration preserves explicit authenticated support RPC grants"],
   [migrationPaths.indexOf("supabase/migrations/202607290001_support_rpc_response_compatibility.sql") > migrationPaths.indexOf("supabase/migrations/202607280003_lifecycle_rpcs.sql"), "compatibility migration runs after lifecycle RPCs"],
   [lifecycle.includes("revoke all on function private.require_actor()") && !/grant execute on function private\./i.test(lifecycle), "private helpers are not executable by browser roles"],
