@@ -7,6 +7,7 @@ import type { SupportRepository } from "../features/support/repository";
 import { createFixtureServices } from "./fixture/services";
 import { createSupabaseAuthPort, createUnavailableAuthPort } from "./supabase/auth";
 import { createSupabaseBrowserClient, isSupabaseConfigured } from "./supabase/client";
+import { asLifecycleClient, createSupabaseLifecycleRepositories } from "./supabase/repositories/lifecycle";
 import { asPrivateDataClient, createSupabasePrivateRepositories } from "./supabase/repositories/private";
 
 export type AppServices = {
@@ -41,12 +42,11 @@ export function createAppServices(environment = readEnvironment()): AppServices 
   if (environment.adapter === "supabase" && isSupabaseConfigured(config)) {
     const client = createSupabaseBrowserClient(config);
     const privateRepositories = createSupabasePrivateRepositories(asPrivateDataClient(client));
-    const unavailable = async (): Promise<never> => { throw new Error("El servicio de datos no está disponible. No se guardaron cambios."); };
+    const lifecycleRepositories = createSupabaseLifecycleRepositories(asLifecycleClient(client));
     return {
       auth: createSupabaseAuthPort(client),
       ...privateRepositories,
-      partnership: { getMine: unavailable, createInvite: unavailable, acceptInvite: unavailable, rejectInvite: unavailable, cancelInvite: unavailable, pause: unavailable, end: unavailable },
-      support: { list: unavailable, create: unavailable, acknowledge: unavailable, close: unavailable },
+      ...lifecycleRepositories,
     };
   }
 
