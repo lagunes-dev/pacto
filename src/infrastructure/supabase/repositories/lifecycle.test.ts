@@ -151,4 +151,55 @@ describe("Supabase partnership and support repositories", () => {
       { boundary: "rpc", name: "create_support_request", value: { request_type: "practical_help" } },
     ]);
   });
+
+  it("maps complete acknowledge and close RPC responses without private fields", async () => {
+    const acknowledged = {
+      support_request_id: "request-1",
+      requester_id: "user-a",
+      support_type: "check_in",
+      support_status: "acknowledged",
+      created_at: "2026-07-29T10:00:00Z",
+      acknowledged_at: "2026-07-29T10:05:00Z",
+      private_notes: "must not leak",
+    };
+    const closed = { ...acknowledged, support_status: "closed" as const };
+    const { client, operations } = createClient({
+      "rpc:acknowledge_support_request": [{ data: [acknowledged], error: null }],
+      "rpc:close_support_request": [{ data: [closed], error: null }],
+    });
+    const { support } = createSupabaseLifecycleRepositories(client);
+
+    await expect(support.acknowledge("request-1")).resolves.toEqual({
+      id: "request-1",
+      type: "check_in",
+      status: "acknowledged",
+      requestedBy: "partner",
+      createdAt: acknowledged.created_at,
+      updatedAt: acknowledged.acknowledged_at,
+    });
+    await expect(support.close("request-1")).resolves.toEqual({
+      id: "request-1",
+      type: "check_in",
+      status: "closed",
+      requestedBy: "partner",
+      createdAt: closed.created_at,
+      updatedAt: closed.acknowledged_at,
+    });
+    expect(operations.filter((operation) => operation.boundary === "rpc")).toEqual([
+      { boundary: "rpc", name: "acknowledge_support_request", value: { request_id: "request-1" } },
+      { boundary: "rpc", name: "close_support_request", value: { request_id: "request-1" } },
+    ]);
+  });
+
+  it("rejects an incomplete support transition response", async () => {
+    const { client } = createClient({
+      "rpc:acknowledge_support_request": [{
+        data: [{ support_request_id: "request-1", support_status: "acknowledged", created_at: "2026-07-29T10:00:00Z", acknowledged_at: "2026-07-29T10:05:00Z" }],
+        error: null,
+      }],
+    });
+    const { support } = createSupabaseLifecycleRepositories(client);
+
+    await expect(support.acknowledge("request-1")).rejects.toThrow("Support request response was incomplete");
+  });
 });

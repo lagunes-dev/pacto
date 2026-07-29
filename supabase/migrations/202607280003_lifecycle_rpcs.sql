@@ -239,9 +239,11 @@ as $$
   limit 1
 $$;
 
+drop function if exists public.create_support_request(text);
 create or replace function public.create_support_request(request_type text)
 returns table (
   support_request_id uuid,
+  requester_id uuid,
   support_type text,
   support_status public.support_status,
   created_at timestamptz,
@@ -263,14 +265,17 @@ begin
   return query
   insert into public.support_requests (requester_id, partnership_id, support_type)
   values (actor_id, partnership_id, normalized_type)
-  returning support_requests.id, support_requests.support_type, support_requests.status,
+  returning support_requests.id, support_requests.requester_id, support_requests.support_type, support_requests.status,
     support_requests.created_at, support_requests.acknowledged_at;
 end;
 $$;
 
+drop function if exists public.acknowledge_support_request(uuid);
 create or replace function public.acknowledge_support_request(request_id uuid)
 returns table (
   support_request_id uuid,
+  requester_id uuid,
+  support_type text,
   support_status public.support_status,
   created_at timestamptz,
   acknowledged_at timestamptz
@@ -293,15 +298,18 @@ begin
     and actor_id in (p.inviter_id, p.invitee_id)
     and actor_id <> r.requester_id
     and r.status = 'pending'
-  returning r.id, r.status, r.created_at, r.acknowledged_at;
+  returning r.id, r.requester_id, r.support_type, r.status, r.created_at, r.acknowledged_at;
 
   if not found then raise exception 'support request unavailable' using errcode = '42501'; end if;
 end;
 $$;
 
+drop function if exists public.close_support_request(uuid);
 create or replace function public.close_support_request(request_id uuid)
 returns table (
   support_request_id uuid,
+  requester_id uuid,
+  support_type text,
   support_status public.support_status,
   created_at timestamptz,
   acknowledged_at timestamptz
@@ -324,7 +332,7 @@ begin
     and actor_id in (p.inviter_id, p.invitee_id)
     and actor_id <> r.requester_id
     and r.status = 'acknowledged'
-  returning r.id, r.status, r.created_at, r.acknowledged_at;
+  returning r.id, r.requester_id, r.support_type, r.status, r.created_at, r.acknowledged_at;
 
   if not found then raise exception 'support request unavailable' using errcode = '42501'; end if;
 end;

@@ -49,6 +49,7 @@ const assertions = [
   [lifecycle.includes("auth.uid()") && lifecycle.includes("private.require_actor()"), "lifecycle identity is derived from auth.uid()"],
   [lifecycle.includes("private.active_partnership_id()") && lifecycle.includes("p.status = 'active'"), "support creation requires active membership"],
   [lifecycle.includes("actor_id <> r.requester_id") && lifecycle.includes("r.status = 'acknowledged'"), "support transitions require the other member and valid state"],
+  [lifecycle.includes("requester_id uuid") && lifecycle.includes("support_type text") && (lifecycle.match(/support_request_id uuid/g) ?? []).length >= 3, "support write RPCs return the complete safe DTO source fields"],
   [lifecycle.includes("revoke all on function private.require_actor()") && !/grant execute on function private\./i.test(lifecycle), "private helpers are not executable by browser roles"],
   [lifecycle.includes("revoke insert, update, delete on public.partnerships") && lifecycle.includes("revoke insert, update, delete on public.support_requests"), "direct lifecycle table mutation remains revoked"],
   [lifecycleRpcs.every((rpc) => lifecycle.includes(`grant execute on function public.${rpc} to authenticated`)), "every public lifecycle RPC has a named authenticated grant"],
