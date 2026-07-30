@@ -988,3 +988,137 @@ h1 {
   min-width: 44px;
   min-height: 44px;
 }
+
+.icon-button,
+.profile-chip {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.profile-chip {
+  gap: 8px;
+  padding: 5px 10px 5px 5px;
+}
+
+.avatar {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--color-cream);
+  color: #17301f;
+  font-weight: 900;
+}
+
+.modal {
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(720px, calc(100dvh - 32px));
+  padding: 0;
+  overflow: auto;
+  border: 1px solid rgba(209, 232, 214, 0.2);
+  border-radius: var(--radius-large);
+  background: #172019;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.55);
+  color: var(--color-text);
+}
+
+.modal::backdrop {
+  background: rgba(5, 10, 7, 0.76);
+  backdrop-filter: blur(5px);
+}
+
+.modal-head,
+.modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+}
+
+.modal-head {
+  border-bottom: 1px solid var(--color-line);
+}
+
+.modal-head h2,
+.modal-head p,
+.step p {
+  margin: 0;
+}
+
+.modal-head p,
+.step p {
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-actions {
+  justify-content: flex-end;
+  border-top: 1px solid var(--color-line);
+}
+
+.stepper {
+  display: grid;
+  gap: 14px;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.step-num {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(125, 189, 143, 0.16);
+  color: var(--color-sage);
+  font-weight: 850;
+}
+
+.toast {
+  position: fixed;
+  right: max(18px, env(safe-area-inset-right, 0px));
+  bottom: max(18px, env(safe-area-inset-bottom, 0px));
+  z-index: 80;
+  display: grid;
+  width: min(360px, calc(100vw - 36px));
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid rgba(167, 215, 178, 0.22);
+  border-radius: 13px;
+  background: #1b281f;
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.42);
+  color: var(--color-text);
+}
+
+.toast span {
+  color: var(--color-muted);
+  line-height: 1.45;
+}
+
+@media (max-width: 540px) {
+  .profile-chip > span:last-child { display: none; }
+  .toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+  .modal-head, .modal-body, .modal-actions { padding: 16px; }
+}

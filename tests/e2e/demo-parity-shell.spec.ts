@@ -58,3 +58,57 @@ test("navigates the four canonical views with a sole active item", async ({ page
     await expectNavigation(page, label);
   }
 });
+
+test("restores setup focus and gives temporary notification feedback", async ({ page }, testInfo) => {
+  await register(page, `feedback-${testInfo.project.name}@example.com`);
+
+  const setup = page.getByRole("button", { name: "Abrir configuración inicial" });
+  await setup.click();
+  const dialog = page.getByRole("dialog", { name: "Configura tu Pacto" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Cerrar configuración" })).toBeFocused();
+  await dialog.getByRole("button", { name: "Cerrar", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(setup).toBeFocused();
+
+  await page.getByRole("button", { name: "Consultar notificaciones" }).click();
+  const toast = page.getByRole("status").filter({ hasText: "Notificaciones" });
+  await expect(toast).toBeVisible();
+  await expect(toast).toContainText(/no (están|está)|desactivadas|bloqueado|admite|activadas/i);
+  await page.waitForTimeout(4_500);
+  await expect(toast).toBeVisible();
+  await expect(toast).toBeHidden({ timeout: 1_500 });
+});
+
+test("topbar reports capability and offline boundaries truthfully", async ({ context, page }, testInfo) => {
+  await register(page, `status-${testInfo.project.name}@example.com`);
+
+  const install = page.getByText("Instalar", { exact: true });
+  await expect(install).toBeVisible();
+  await install.click();
+  await expect(page.getByText(/elige Instalar cuando esté disponible|instalación desde este navegador/i)).toBeVisible();
+
+  await context.setOffline(true);
+  const connection = page.getByLabel("Estado de conexión");
+  await expect(connection).toContainText("Sin conexión");
+  await expect(connection).toContainText("no se guardan para enviar después");
+  await context.setOffline(false);
+});
+
+for (const width of [320, 390, 430]) {
+  test(`${width}px keeps all parity routes active and free of horizontal overflow`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: width === 320 ? 700 : width === 390 ? 844 : 932 });
+    await register(page, `parity-${width}-${testInfo.project.name}@example.com`);
+
+    for (const [label, path] of [["Inicio", "/inicio"], ["Registro", "/registro"], ["Progreso", "/progreso"], ["Acuerdo", "/acuerdo"]] as const) {
+      await page.getByRole("navigation", { name: "Navegación móvil" }).getByRole("link", { name: label }).click();
+      await expect(page).toHaveURL(new RegExp(`${path}$`));
+      await expectNavigation(page, label);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    }
+
+    await page.goBack();
+    await expect(page).toHaveURL(/\/progreso$/);
+    await expectNavigation(page, "Progreso");
+  });
+}
