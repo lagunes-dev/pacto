@@ -16,8 +16,8 @@ export function InstallGuidance() {
   }
 
   const guidance = isAppleMobileDevice()
-    ? "En Safari, abrí Compartir y elegí Agregar a inicio."
-    : "Usá la opción Instalar de tu navegador cuando esté disponible.";
+    ? "En Safari, abre Compartir y elige Agregar a inicio."
+    : "Usa la opción Instalar de tu navegador cuando esté disponible.";
 
   return (
     <details className="install-guidance">

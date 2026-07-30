@@ -233,7 +233,7 @@ button {
 
 .topbar {
   position: sticky;
-  top: 18px;
+  top: calc(18px + env(safe-area-inset-top, 0px));
   z-index: 20;
   display: flex;
   min-height: 62px;
@@ -251,6 +251,8 @@ button {
 
 .topbar strong {
   font-size: 13px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .topbar time {
@@ -275,6 +277,7 @@ button {
 
 .app-status {
   display: flex;
+  min-width: 0;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
@@ -325,14 +328,22 @@ button {
   line-height: 1.5;
 }
 
+.safe-area-top,
+.safe-area-bottom {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 .content {
   width: min(100%, 1240px);
+  min-width: 0;
   margin: 0 auto;
   padding-top: 32px;
 }
 
 .route-card {
   width: min(100%, 680px);
+  min-width: 0;
   padding: clamp(24px, 5vw, 52px);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-large);
@@ -654,7 +665,7 @@ h1 {
   }
 
   .topbar {
-    top: 10px;
+    top: calc(10px + env(safe-area-inset-top, 0px));
   }
 
   .content {
@@ -664,7 +675,7 @@ h1 {
   .mobile-nav {
     position: fixed;
     right: max(10px, env(safe-area-inset-right, 0px));
-    bottom: max(10px, env(safe-area-inset-bottom, 0px));
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
     left: max(10px, env(safe-area-inset-left, 0px));
     z-index: 40;
     display: grid;
@@ -693,7 +704,26 @@ h1 {
 
 @media (max-width: 540px) {
   .topbar {
-    padding-left: 14px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding: 10px 12px;
+  }
+
+  .topbar > div:first-child { flex: 1 1 9rem; }
+
+  .app-status {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+
+  .install-guidance[open] { flex-basis: 100%; }
+
+  .install-guidance-card {
+    position: static;
+    width: auto;
+    margin-top: 8px;
   }
 
   .status-chip {
@@ -709,8 +739,21 @@ h1 {
   }
 
   .route-card {
-    padding: 24px 18px;
+    padding: 20px 16px;
   }
+
+  .content { padding-top: 18px; }
+  .progress-route { gap: 1rem; }
+  .progress-grid article,
+  .progress-empty,
+  .consent-panel,
+  .consent-form { padding: 0.8rem; }
+  .route-heading { align-items: flex-start; }
+  .route-heading > * { min-width: 0; }
+  .form-actions,
+  .habit-actions { align-items: stretch; }
+  .form-actions .primary-button,
+  .form-actions .text-link { max-width: 100%; overflow-wrap: anywhere; }
 }
 
 @media (prefers-reduced-motion: reduce) {

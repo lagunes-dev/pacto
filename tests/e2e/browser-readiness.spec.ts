@@ -53,3 +53,17 @@ test("serves the generated manifest, worker, and declared icons", async ({ reque
     expect((await request.get(icon.src)).ok()).toBe(true);
   }
 });
+
+test.describe("narrow mobile shell", () => {
+  for (const viewport of [320, 390, 430]) {
+    test(`${viewport}px keeps the private shell usable`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width: viewport, height: viewport === 320 ? 700 : viewport === 390 ? 844 : 932 });
+      await register(page, `mobile-${viewport}-${testInfo.project.name}@example.com`);
+      await expectNoHorizontalOverflow(page);
+      await expect(page.locator(".safe-area-top")).toHaveClass(/safe-area-top/);
+      await expect(page.locator(".safe-area-bottom")).toHaveClass(/safe-area-bottom/);
+      await expect(page.locator(".topbar")).toHaveCSS("top", "10px");
+      await expect(page.locator(".mobile-nav")).toBeVisible();
+    });
+  }
+});

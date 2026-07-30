@@ -30,6 +30,8 @@ describe("Pacto routed shell", () => {
     renderRoute("/progress", services);
     expect(await screen.findByRole("navigation", { name: "Navegación principal" })).toBeInTheDocument();
     expect(screen.getByRole("complementary", { name: "Barra lateral" })).toBeInTheDocument();
+    expect(document.querySelector(".safe-area-top")).toBeInTheDocument();
+    expect(document.querySelector(".safe-area-bottom")).toBeInTheDocument();
   });
 
   it.each(["/habits/new", "/progress"])("guards %s without claiming authentication", (path) => {

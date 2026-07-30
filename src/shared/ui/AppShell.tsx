@@ -69,7 +69,7 @@ export function AppShell({ children }: PropsWithChildren) {
       </aside>
 
       <div className="main-column">
-        <header className="topbar glass">
+        <header className="topbar glass safe-area-top">
           <div>
             <strong>{title}</strong>
             <time dateTime={new Date().toISOString()}>{today}</time>
@@ -97,7 +97,9 @@ export function AppShell({ children }: PropsWithChildren) {
         </main>
       </div>
 
-       <Navigation label="Navegación móvil" items={navItems} mobile />
+        <div className="safe-area-bottom">
+          <Navigation label="Navegación móvil" items={navItems} mobile />
+        </div>
     </div>
   );
 }
