@@ -27,12 +27,17 @@ El plan Free puede pausar proyectos inactivos y sus cuotas cambian con el tiempo
 
 ## Aplicar y validar migraciones
 
-Las migraciones se aplican en orden y son rerunnable:
+Las migraciones se aplican en este orden completo y son rerunnable:
 
 ```text
 supabase/migrations/202607280001_authorization_schema.sql
 supabase/migrations/202607280002_rls_policies.sql
 supabase/migrations/202607280003_lifecycle_rpcs.sql
+supabase/migrations/202607290001_support_rpc_response_compatibility.sql
+supabase/migrations/202607290002_support_rpc_full_response.sql
+supabase/migrations/202607290003_lifecycle_rpc_contracts.sql
+supabase/migrations/202607290004_profile_bootstrap_lifecycle.sql
+supabase/migrations/202607290005_qualify_support_returning.sql
 ```
 
 Antes de producción:
@@ -40,12 +45,12 @@ Antes de producción:
 1. Toma un respaldo verificable según la política del entorno.
 2. Prueba primero en un proyecto descartable con el mismo nivel de migraciones.
 3. Expone `SUPABASE_TEST_DB_URL` solo al proceso actual y confirma que `psql` esté en `PATH`.
-4. Ejecuta `npm ci`, `npm run test:sql` y `npm run test:rls`.
+4. Ejecuta `npm ci`, `npm run test:sql` y `npm run test:rls`. Para los gates locales completos, ejecuta también `npm test`, `npm run build` y `npm audit --omit=dev`.
 5. Revisa el resultado: un `SKIPPED (BLOCKED)` NO es evidencia aprobada.
 6. Aplica los mismos archivos, en el mismo orden, al destino autorizado.
 7. Repite las pruebas contra el destino de validación posterior al despliegue.
 
-`npm run test:sql` aplica las tres migraciones dos veces antes de ejecutar las aserciones SQL. Esto verifica convergencia, forced RLS, grants y restricciones. La URL de conexión permite migrar y por eso nunca debe llegar al navegador.
+`npm run test:sql` aplica las ocho migraciones dos veces, desde `202607280001` hasta `202607290005`, antes de ejecutar `supabase/tests/authorization_rls.sql` y `supabase/tests/lifecycle_rpcs.sql`. Esto verifica convergencia, forced RLS, grants y restricciones. La URL de conexión permite migrar y por eso nunca debe llegar al navegador.
 
 ## Harness de autorización en vivo
 
@@ -107,7 +112,7 @@ No desactives RLS, no restaures políticas permisivas y no borres datos para rec
 
 3. Verifica que `authenticated` ya no tenga grants de tablas ni ejecución de RPCs. Forced RLS, políticas, esquema y datos deben permanecer.
 4. Investiga y corrige en un entorno descartable.
-5. Para avanzar nuevamente, reaplica las tres migraciones en orden, ejecuta SQL y harness en vivo, y solo entonces restaura `VITE_DATA_ADAPTER=supabase`.
+5. Para avanzar nuevamente, reaplica las ocho migraciones en orden, ejecuta SQL y harness en vivo, y solo entonces restaura `VITE_DATA_ADAPTER=supabase`.
 
 El rollback SQL es rerunnable y su unidad de reversión es el acceso del navegador. Un teardown destructivo pertenece únicamente a proyectos descartables y no forma parte de este runbook.
 
