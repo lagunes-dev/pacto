@@ -7,9 +7,12 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "build:e2e": "tsc -b && vite build --mode e2e",
+    "typecheck": "tsc -b",
     "preview:e2e": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "validate:pwa": "node scripts/validate-pwa-artifacts.mjs",
+    "audit:check": "node scripts/check-dependency-audit.mjs",
     "test:rls": "node scripts/run-live-authorization.mjs",
     "test:sql": "node scripts/validate-supabase-sql.mjs",
     "test:watch": "vitest"

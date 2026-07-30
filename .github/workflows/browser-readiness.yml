@@ -1,0 +1,58 @@
+name: Browser readiness
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  required-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Format check (when configured)
+        run: npm run format:check --if-present
+      - name: Lint (when configured)
+        run: npm run lint --if-present
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run test:sql
+      - run: npm run build
+      - run: npm run validate:pwa
+      - name: Production dependency audit
+        run: npm audit --omit=dev
+      - name: Classify reviewed development audit inventory
+        run: npm run audit:check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deployable-dist
+          path: dist
+          if-no-files-found: error
+
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - name: Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure-evidence
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
