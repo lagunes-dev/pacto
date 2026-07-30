@@ -9,6 +9,7 @@
 }
 
 html {
+  min-height: 100%;
   scroll-behavior: smooth;
 }
 
@@ -78,11 +79,18 @@ button {
 
 .app-shell {
   min-height: 100vh;
+  min-height: 100dvh;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
 }
 
 .sidebar {
   position: fixed;
-  inset: 18px auto 18px 18px;
+  top: calc(18px + env(safe-area-inset-top, 0px));
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  left: calc(18px + env(safe-area-inset-left, 0px));
   z-index: 30;
   display: flex;
   width: var(--sidebar-width);
@@ -194,8 +202,9 @@ button {
 
 .main-column {
   min-height: 100vh;
-  margin-left: calc(var(--sidebar-width) + 36px);
-  padding: 18px 26px 50px 18px;
+  min-height: 100dvh;
+  margin-left: calc(var(--sidebar-width) + 36px + env(safe-area-inset-left, 0px));
+  padding: 18px calc(26px + env(safe-area-inset-right, 0px)) calc(50px + env(safe-area-inset-bottom, 0px)) 18px;
 }
 
 .topbar {
@@ -228,6 +237,9 @@ button {
 }
 
 .status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 7px 9px;
   border: 1px solid rgba(167, 215, 178, 0.11);
   border-radius: 10px;
@@ -235,6 +247,58 @@ button {
   color: var(--color-sage);
   font-size: 10px;
   font-weight: 750;
+}
+
+.app-status {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 0 3px rgba(167, 215, 178, 0.08);
+}
+
+.status-chip-offline {
+  border-color: rgba(255, 193, 187, 0.2);
+  background: rgba(127, 45, 45, 0.18);
+  color: #ffc1bb;
+}
+
+.install-guidance {
+  position: relative;
+  color: var(--color-muted);
+  font-size: 10px;
+}
+
+.install-guidance summary {
+  min-height: 32px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 750;
+  list-style-position: inside;
+}
+
+.install-guidance-card {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(280px, calc(100vw - 32px));
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 11px;
+  background: #172019;
+  box-shadow: var(--shadow-panel);
+  color: var(--color-muted);
+  line-height: 1.5;
 }
 
 .content {
@@ -562,7 +626,7 @@ h1 {
 
   .main-column {
     margin-left: 0;
-    padding: 12px 12px 96px;
+    padding: 12px max(12px, env(safe-area-inset-right, 0px)) calc(96px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
   }
 
   .topbar {
@@ -575,9 +639,9 @@ h1 {
 
   .mobile-nav {
     position: fixed;
-    right: 10px;
-    bottom: max(10px, env(safe-area-inset-bottom));
-    left: 10px;
+    right: max(10px, env(safe-area-inset-right, 0px));
+    bottom: max(10px, env(safe-area-inset-bottom, 0px));
+    left: max(10px, env(safe-area-inset-left, 0px));
     z-index: 40;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -609,7 +673,15 @@ h1 {
   }
 
   .status-chip {
+    padding: 7px;
+  }
+
+  .status-chip .visually-hidden {
     display: none;
+  }
+
+  .install-guidance summary {
+    padding-inline: 8px;
   }
 
   .route-card {

@@ -9,14 +9,20 @@ export const pwaOptions = {
   manifest: {
     name: "Pacto",
     short_name: "Pacto",
+    lang: "es",
     scope: "/",
     start_url: "/",
     display: "standalone" as const,
-    theme_color: "#7c3aed",
-    background_color: "#f8fafc",
+    theme_color: "#0b100d",
+    background_color: "#0b100d",
+    icons: [
+      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+      { src: "/icons/maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" as const },
+    ],
   },
   workbox: {
-    globPatterns: ["**/*.{html,js,css}"],
+    globPatterns: ["**/*.{html,js,css,png}"],
     navigateFallback: "index.html",
     runtimeCaching: [],
   },

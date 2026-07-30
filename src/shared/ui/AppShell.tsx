@@ -3,6 +3,8 @@ import { NavLink, useLocation } from "react-router";
 
 import { appConfig } from "../../app/config";
 import { useAuth } from "../../features/auth/queries/AuthProvider";
+import { InstallGuidance } from "../../pwa/InstallGuidance";
+import { useConnectivity } from "../../pwa/useConnectivity";
 
 type NavItem = {
   to: string;
@@ -36,6 +38,7 @@ function Navigation({ label, items, mobile = false }: { label: string; items: Na
 export function AppShell({ children }: PropsWithChildren) {
   const location = useLocation();
   const { session } = useAuth();
+  const isOnline = useConnectivity();
   const navItems = session ? privateNavItems : [{ to: "/sign-in", label: "Acceso", icon: <LockIcon /> }];
   const title = location.pathname.startsWith("/partnership") ? "Vínculo y consentimiento" : location.pathname === "/progress" ? "Progreso personal" : "Espacio privado";
   const today = new Intl.DateTimeFormat(appConfig.locale, {
@@ -71,7 +74,23 @@ export function AppShell({ children }: PropsWithChildren) {
             <strong>{title}</strong>
             <time dateTime={new Date().toISOString()}>{today}</time>
           </div>
-          <span className="status-chip">Base visual</span>
+          <div className="app-status">
+            <InstallGuidance />
+            <span
+              className={`status-chip${isOnline ? "" : " status-chip-offline"}`}
+              aria-label="Estado de conexión"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              <span className="status-dot" aria-hidden="true" />
+              {isOnline ? "Con conexión" : "Sin conexión"}
+              <span className="visually-hidden">
+                {isOnline
+                  ? ". La conexión está disponible."
+                  : ". Las acciones privadas requieren conexión y no se guardan para enviar después."}
+              </span>
+            </span>
+          </div>
         </header>
         <main id="main-content" className="content" tabIndex={-1}>
           {children}

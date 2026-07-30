@@ -11,12 +11,21 @@ describe("PWA generation", () => {
 
   it("precaches only emitted public shell assets and has no runtime cache", () => {
     expect(pwaOptions.workbox).toEqual({
-      globPatterns: ["**/*.{html,js,css}"],
+      globPatterns: ["**/*.{html,js,css,png}"],
       navigateFallback: "index.html",
       runtimeCaching: [],
     });
 
     const serialized = JSON.stringify(pwaOptions.workbox);
     expect(serialized).not.toMatch(/supabase|auth|token|private|https?:/i);
+  });
+
+  it("declares purpose-specific install icons", () => {
+    expect(pwaOptions.manifest.lang).toBe("es");
+    expect(pwaOptions.manifest.icons).toEqual([
+      expect.objectContaining({ src: "/icons/icon-192.png", sizes: "192x192" }),
+      expect.objectContaining({ src: "/icons/icon-512.png", sizes: "512x512" }),
+      expect.objectContaining({ src: "/icons/maskable-512.png", purpose: "maskable" }),
+    ]);
   });
 });
