@@ -5,12 +5,15 @@ import type { PartnershipRepository } from "../features/partnership/repository";
 import type { PreferenceRepository } from "../features/preferences/repository";
 import type { SupportRepository } from "../features/support/repository";
 import type { OfflineQueuePort } from "../features/offline-queue/port";
+import type { RealtimePort } from "../features/realtime/port";
+import { createUnavailableRealtimePort } from "../features/realtime/port";
 import { createFixtureServices } from "./fixture/services";
 import { createSupabaseAuthPort, createUnavailableAuthPort } from "./supabase/auth";
 import { createSupabaseBrowserClient, isSupabaseConfigured } from "./supabase/client";
 import { asLifecycleClient, createSupabaseLifecycleRepositories } from "./supabase/repositories/lifecycle";
 import { asPrivateDataClient, createSupabasePrivateRepositories } from "./supabase/repositories/private";
 import { createIndexedDbOfflineQueue } from "./indexeddb/offlineQueue";
+import { createSupabaseRealtimePort } from "./supabase/realtime";
 
 export type AppServices = {
   auth: AuthPort;
@@ -20,6 +23,7 @@ export type AppServices = {
   preferences: PreferenceRepository;
   support: SupportRepository;
   offlineQueue: OfflineQueuePort;
+  realtime: RealtimePort;
 };
 
 export type AppEnvironment = {
@@ -40,7 +44,7 @@ function readEnvironment(): AppEnvironment {
 
 export function createAppServices(environment = readEnvironment()): AppServices {
   const offlineQueue = createIndexedDbOfflineQueue();
-  if (environment.adapter === "fixture" && environment.isDevelopment) return { ...createFixtureServices(), offlineQueue };
+  if (environment.adapter === "fixture" && environment.isDevelopment) return { ...createFixtureServices(), offlineQueue, realtime: createUnavailableRealtimePort() };
 
   const config = { url: environment.supabaseUrl, publishableKey: environment.supabasePublishableKey };
   if (environment.adapter === "supabase" && isSupabaseConfigured(config)) {
@@ -52,6 +56,7 @@ export function createAppServices(environment = readEnvironment()): AppServices 
       ...privateRepositories,
       ...lifecycleRepositories,
       offlineQueue,
+      realtime: createSupabaseRealtimePort(client),
     };
   }
 
@@ -81,7 +86,7 @@ export function createAppServices(environment = readEnvironment()): AppServices 
   };
   const preferences: PreferenceRepository = { getMine: unavailable, updateMine: unavailable };
   const support: SupportRepository = { list: unavailable, create: unavailable, acknowledge: unavailable, close: unavailable };
-  return { auth, habits, progress, partnership, preferences, support, offlineQueue };
+  return { auth, habits, progress, partnership, preferences, support, offlineQueue, realtime: createUnavailableRealtimePort() };
 }
 
 export function createAuthPort(): AuthPort { return createAppServices().auth; }
