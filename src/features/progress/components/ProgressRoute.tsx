@@ -41,8 +41,27 @@ export function ProgressRoute() {
             <article><strong>{progress.data.completedEntryCount}</strong><span>Registros completados</span></article>
             <article><strong>{progress.data.activeDayCount}</strong><span>Días con actividad</span></article>
           </div>
-          <ul className="progress-habits">{progress.data.habits.map((habit) => <li key={habit.id}>{habit.name}</li>)}</ul>
-        </>
+          <section className="active-habits" aria-labelledby="active-habits-title">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Tu inventario personal</p>
+                <h2 id="active-habits-title">Hábitos activos</h2>
+              </div>
+              <Link className="text-link" to="/habits/new">Agregar hábito</Link>
+            </div>
+            <div className="active-habits-list">
+              {progress.data.habits.map((habit) => (
+                <article className="active-habit-card" key={habit.id} aria-label={`Hábito ${habit.name}`}>
+                  <div>
+                    <h3>{habit.name}</h3>
+                    <p>Prioridad {habit.priority} · {habit.active ? "Activo" : "Pausado"}</p>
+                  </div>
+                  <Link className="secondary-button" to="/habits/new">Administrar</Link>
+                </article>
+              ))}
+            </div>
+          </section>
+         </>
       )}
       <SessionActions />
     </section>

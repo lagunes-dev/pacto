@@ -137,6 +137,19 @@ describe("private habit and progress flow", () => {
     expect(screen.getByText(/todavía no registra un check-in/)).toBeInTheDocument();
   });
 
+  it("renders active habits as labeled manageable cards", async () => {
+    const { services } = await ownerServices();
+    await services.habits.create({ name: "Leer", priority: 1 });
+    render(
+      <MemoryRouter><AppProviders authPort={services.auth} habitRepository={services.habits} progressRepository={services.progress}><ProgressRoute /></AppProviders></MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Hábitos activos" })).toBeInTheDocument();
+    expect(screen.getByRole("article", { name: "Hábito Leer" })).toHaveTextContent("Prioridad 1 · Activo");
+    expect(screen.getByRole("link", { name: "Administrar" })).toHaveAttribute("href", "/habits/new");
+    expect(screen.queryByText("Leer", { selector: ".progress-habits" })).not.toBeInTheDocument();
+  });
+
   it("gives progress management a deliberate primary action", async () => {
     const { services } = await ownerServices();
     render(

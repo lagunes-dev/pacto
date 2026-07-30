@@ -74,6 +74,10 @@ test.describe("narrow mobile shell", () => {
       await page.getByRole("button", { name: "Crear hábito" }).click();
       await page.getByRole("link", { name: "Progreso" }).first().click();
       await expect(page.getByRole("heading", { name: "Siguiente decisión" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Hábitos activos" })).toBeVisible();
+      await expect(page.getByRole("article", { name: `Hábito Decisión ${viewport}` })).toContainText("Prioridad 2 · Activo");
+      await expect(page.locator(".active-habits-list")).toContainText("Administrar");
+      await expect(page.locator(".progress-habits")).toHaveCount(0);
       const manageHabits = page.getByRole("link", { name: "Administrar hábitos" });
       await expect(manageHabits).toHaveCSS("min-height", "44px");
       const actionLayout = await manageHabits.evaluate((element) => {
