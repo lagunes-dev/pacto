@@ -1,6 +1,7 @@
 import {
   createBrowserRouter,
   Navigate,
+  redirect,
   type RouteObject,
 } from "react-router";
 
@@ -14,6 +15,21 @@ import { RequireSession } from "../features/auth/components/RequireSession";
 import { PartnershipRoute } from "../features/partnership/components/PartnershipRoute";
 import { PreferencesRoute } from "../features/preferences/components/PreferencesRoute";
 import { SupportRoute } from "../features/support/components/SupportRoute";
+import { OfflineRoute } from "../features/offline/OfflineRoute";
+
+export function offlinePrivateLoader() {
+  return navigator.onLine ? null : redirect("/offline");
+}
+
+function UnavailableRoute() {
+  return navigator.onLine ? (
+    <main aria-labelledby="not-found-title">
+      <h1 id="not-found-title">Page not found</h1>
+    </main>
+  ) : (
+    <Navigate to="/offline" replace />
+  );
+}
 
 export const appRoutes: RouteObject[] = [
   {
@@ -23,7 +39,9 @@ export const appRoutes: RouteObject[] = [
       { index: true, element: <Navigate to="/sign-in" replace /> },
       { path: "sign-in", element: <AuthRoute mode="login" /> },
       { path: "register", element: <AuthRoute mode="register" /> },
+      { path: "offline", element: <OfflineRoute /> },
       {
+        loader: offlinePrivateLoader,
         element: <RequireSession />,
         children: [
           { path: "habits/new", element: <NewHabitRoute /> },
@@ -33,6 +51,7 @@ export const appRoutes: RouteObject[] = [
           { path: "partnership/support", element: <SupportRoute /> },
         ],
       },
+      { path: "*", element: <UnavailableRoute /> },
     ],
   },
 ];
