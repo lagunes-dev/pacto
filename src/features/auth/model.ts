@@ -9,5 +9,5 @@ export type RegistrationResult =
 
 export const authCredentialsSchema = z.object({
   email: z.email("Ingresa un correo válido."),
-  password: z.string().min(8, "Usá al menos 8 caracteres.").max(128),
+  password: z.string().min(8, "Usa al menos 8 caracteres.").max(128),
 });

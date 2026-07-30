@@ -57,6 +57,6 @@ describe("iPhone PWA experience", () => {
     vi.stubGlobal("navigator", { ...navigator, userAgent: "iPhone", onLine: true });
     render(<InstallGuidance />);
 
-    expect(screen.getByText(/Compartir/)).toHaveTextContent("Agregar a inicio");
+    expect(screen.getByText(/Compartir/)).toHaveTextContent("Agregar a pantalla de inicio");
   });
 });

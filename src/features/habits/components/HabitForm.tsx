@@ -17,6 +17,7 @@ export function HabitForm() {
   const updateHabit = useUpdateHabit();
   const deleteHabit = useDeleteHabit();
   const [editing, setEditing] = useState<Habit | null>(null);
+  const [pendingRemoval, setPendingRemoval] = useState<Habit | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const { register, handleSubmit, reset, setFocus, formState: { errors } } = useForm<HabitFormValues>({
     resolver: zodResolver(habitFormSchema),
@@ -62,6 +63,7 @@ export function HabitForm() {
       await deleteHabit.mutateAsync(habit.id);
       if (editing?.id === habit.id) cancelEdit();
       setAnnouncement(`${habit.name} fue eliminado.`);
+      setPendingRemoval(null);
     } catch {
       // The inline alert remains actionable and does not claim deletion.
     }
@@ -73,7 +75,7 @@ export function HabitForm() {
         <div>
           <p className="eyebrow">Espacio privado</p>
           <h1 id="habit-form-title">{editing ? "Editar hábito" : "Crear un hábito"}</h1>
-          <p className="route-lead">Solo vos podés ver y modificar estos hábitos.</p>
+          <p className="route-lead">Solo tú puedes ver y modificar estos hábitos.</p>
         </div>
 
         <label htmlFor="habit-name">Nombre</label>
@@ -106,14 +108,15 @@ export function HabitForm() {
         <h2 id="habit-list-title">Tus hábitos</h2>
         {habitsQuery.isPending && <p role="status">Cargando tus hábitos…</p>}
         {habitsQuery.isError && <div className="service-alert" role="alert"><strong>No pudimos cargar tus hábitos.</strong><span>{message(habitsQuery.error)}</span><button type="button" className="text-button" onClick={() => habitsQuery.refetch()}>Reintentar</button></div>}
-        {habitsQuery.isSuccess && habitsQuery.data.length === 0 && <p className="empty-copy">Todavía no creaste hábitos. Tu primer hábito aparecerá acá.</p>}
+        {habitsQuery.isSuccess && habitsQuery.data.length === 0 && <p className="empty-copy">Todavía no has creado hábitos. Tu primer hábito aparecerá aquí.</p>}
         {habitsQuery.data?.map((habit) => (
           <article className="habit-item" key={habit.id}>
             <div><h3>{habit.name}</h3><p>Prioridad {habit.priority}</p></div>
             <div className="habit-actions">
               <button type="button" className="text-button" onClick={() => beginEdit(habit)}>Editar <span className="visually-hidden">{habit.name}</span></button>
-              <button type="button" className="danger-button" disabled={deleteHabit.isPending} onClick={() => remove(habit)}>Eliminar <span className="visually-hidden">{habit.name}</span></button>
+              <button type="button" className="danger-button" disabled={deleteHabit.isPending} onClick={() => setPendingRemoval(habit)}>Eliminar <span className="visually-hidden">{habit.name}</span></button>
             </div>
+            {pendingRemoval?.id === habit.id && <div className="delete-confirmation" role="alertdialog" aria-label={`Confirmar eliminación de ${habit.name}`}><span>¿Eliminar {habit.name}? Esta acción no se puede deshacer.</span><div className="habit-actions"><button type="button" className="text-button" onClick={() => setPendingRemoval(null)}>Cancelar</button><button type="button" className="danger-button" disabled={deleteHabit.isPending} onClick={() => remove(habit)}>Confirmar eliminación</button></div></div>}
           </article>
         ))}
       </section>

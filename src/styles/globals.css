@@ -23,7 +23,7 @@ body {
     radial-gradient(circle at 6% 95%, rgba(209, 176, 123, 0.08), transparent 28rem),
     linear-gradient(180deg, #0c120e, var(--color-background));
   color: var(--color-text);
-  font-family: Inter, "Segoe UI", system-ui, sans-serif;
+  font-family: var(--font-display);
   letter-spacing: -0.012em;
 }
 
@@ -386,7 +386,7 @@ h1 {
 }
 
 .primary-button {
-  min-height: 43px;
+  min-height: 44px;
   padding: 0 15px;
   border: 0;
   border-radius: 11px;
@@ -515,6 +515,9 @@ h1 {
 }
 
 .danger-button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 10px;
   border: 0;
   background: transparent;
   color: #ffb4b4;
@@ -527,6 +530,31 @@ h1 {
   cursor: wait;
   opacity: 0.55;
 }
+
+.delete-confirmation {
+  display: grid;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid rgba(255, 180, 180, 0.35);
+  border-radius: 0.8rem;
+  background: rgba(93, 28, 38, 0.2);
+  color: #ffe5e5;
+  line-height: 1.5;
+}
+
+.today-decision {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+  border: 1px solid rgba(183, 223, 191, 0.22);
+  border-radius: 1rem;
+  background: rgba(183, 223, 191, 0.07);
+}
+
+.today-decision h2,
+.today-decision p { margin: 0; }
+.today-note { color: var(--color-muted); font-size: 0.85rem; line-height: 1.5; }
 
 .progress-route {
   display: grid;
@@ -642,7 +670,8 @@ h1 {
 
 .text-button {
   margin-top: 14px;
-  padding: 8px 0;
+  min-height: 44px;
+  padding: 10px 8px;
   border: 0;
   background: transparent;
   color: var(--color-sage);
@@ -741,6 +770,10 @@ h1 {
   .route-card {
     padding: 20px 16px;
   }
+
+  body { letter-spacing: 0; }
+  .route-lead, .habit-item p, .empty-copy, .progress-empty p { line-height: 1.65; }
+  h1 { line-height: 1.12; }
 
   .content { padding-top: 18px; }
   .progress-route { gap: 1rem; }

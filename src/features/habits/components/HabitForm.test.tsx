@@ -56,7 +56,7 @@ describe("private habit and progress flow", () => {
     await user.type(name, "   ");
     await user.click(screen.getByRole("button", { name: "Crear hábito" }));
 
-    const error = await screen.findByText("Escribí un nombre para el hábito.");
+    const error = await screen.findByText("Escribe un nombre para el hábito.");
     expect(name).toHaveAttribute("aria-describedby", error.id);
     expect(name).toHaveValue("   ");
     expect(store.habits).toHaveLength(0);
@@ -77,8 +77,11 @@ describe("private habit and progress flow", () => {
     expect(store.habits[0].name).toBe("Leer diez páginas");
 
     await user.click(screen.getByRole("button", { name: "Eliminar Leer diez páginas" }));
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("¿Eliminar Leer diez páginas?");
+    expect(store.habits).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "Confirmar eliminación" }));
     await waitFor(() => expect(store.habits).toHaveLength(0));
-    expect(await screen.findByText(/Todavía no creaste hábitos/)).toBeInTheDocument();
+    expect(await screen.findByText(/Todavía no has creado hábitos/)).toBeInTheDocument();
   });
 
   it("shows an honest unavailable error and preserves entered values", async () => {
@@ -105,6 +108,19 @@ describe("private habit and progress flow", () => {
 
     expect(await screen.findByText("No hay actividad persistida ni métricas para mostrar todavía.")).toBeInTheDocument();
     expect(screen.queryByLabelText("Resumen de progreso")).not.toBeInTheDocument();
+  });
+
+  it("renders a truthful next decision from the highest-priority habit", async () => {
+    const { services } = await ownerServices();
+    await services.habits.create({ name: "Leer", priority: 1 });
+    await services.habits.create({ name: "Caminar", priority: 3 });
+    render(
+      <MemoryRouter><AppProviders authPort={services.auth} habitRepository={services.habits} progressRepository={services.progress}><ProgressRoute /></AppProviders></MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Siguiente decisión" })).toBeInTheDocument();
+    expect(screen.getByText((_, element) => element?.textContent === "Enfócate en Caminar.")).toBeInTheDocument();
+    expect(screen.getByText(/todavía no registra un check-in/)).toBeInTheDocument();
   });
 
   it("retries a failed personal progress request", async () => {

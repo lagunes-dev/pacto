@@ -64,6 +64,20 @@ test.describe("narrow mobile shell", () => {
       await expect(page.locator(".safe-area-bottom")).toHaveClass(/safe-area-bottom/);
       await expect(page.locator(".topbar")).toHaveCSS("top", "10px");
       await expect(page.locator(".mobile-nav")).toBeVisible();
+      await expect(await page.locator("button:visible, a:visible").evaluateAll((elements) => elements.every((element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.width >= 44 && rect.height >= 44;
+      }))).toBe(true);
+      await page.getByRole("link", { name: "Crear hábito" }).first().click();
+      await expect(page.getByRole("heading", { name: "Crear un hábito" })).toBeVisible();
+      await page.getByLabel("Nombre").fill(`Decisión ${viewport}`);
+      await page.getByRole("button", { name: "Crear hábito" }).click();
+      await page.getByRole("link", { name: "Progreso" }).first().click();
+      await expect(page.getByRole("heading", { name: "Siguiente decisión" })).toBeVisible();
+      await page.getByRole("link", { name: "Administrar hábitos" }).click();
+      await page.getByRole("button", { name: `Eliminar Decisión ${viewport}` }).click();
+      await expect(page.getByRole("alertdialog")).toBeVisible();
+      await expectNoHorizontalOverflow(page);
     });
   }
 });

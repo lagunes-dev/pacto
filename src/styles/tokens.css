@@ -7,9 +7,12 @@
   --color-text: #f1efe7;
   --color-muted: #aeb8b1;
   --color-muted-soft: #7f8b83;
+  --color-text-muted: var(--color-muted);
   --color-sage: #b7dfbf;
   --color-sage-strong: #7fbd8e;
+  --color-accent: var(--color-sage);
   --color-cream: #e5d9bf;
+  --font-display: Inter, "Segoe UI", system-ui, sans-serif;
   --color-line: rgba(241, 239, 229, 0.09);
   --color-line-strong: rgba(241, 239, 229, 0.16);
   --radius-small: 10px;

@@ -103,7 +103,7 @@ describe("partnership routes", () => {
     expect(await screen.findByText(/No genera alertas automáticas/)).toBeInTheDocument();
     await user.selectOptions(await screen.findByLabelText("Tipo de apoyo"), "practical_help");
     await user.click(screen.getByRole("button", { name: "Solicitar apoyo" }));
-    expect(await screen.findByText("Solicitada por vos · pending")).toBeInTheDocument();
+    expect(await screen.findByText("Solicitada por ti · pending")).toBeInTheDocument();
 
     cleanup();
     renderRoute(second, "/partnership/support");
