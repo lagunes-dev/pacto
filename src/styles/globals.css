@@ -610,6 +610,82 @@ h1 {
   gap: 1.5rem;
 }
 
+.home-route {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.home-hero {
+  width: min(100%, 760px);
+}
+
+.home-dashboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(17rem, 0.75fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.home-stack,
+.register-route,
+.register-actions {
+  display: grid;
+  gap: 1rem;
+}
+
+.home-panel {
+  min-width: 0;
+  padding: 1.25rem;
+  border: 1px solid var(--color-line);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: var(--shadow-panel);
+}
+
+.home-plan {
+  background: linear-gradient(145deg, rgba(125, 189, 143, 0.15), rgba(255, 255, 255, 0.035));
+}
+
+.home-panel h2,
+.home-panel p {
+  margin-top: 0;
+}
+
+.home-panel p:last-child {
+  margin-bottom: 0;
+}
+
+.home-panel > p:not(.eyebrow) {
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+
+.home-panel .text-link,
+.home-panel .secondary-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+}
+
+.home-habits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.home-habits span {
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  color: var(--color-sage);
+  font-size: 0.8rem;
+}
+
+.register-actions {
+  grid-template-columns: repeat(2, minmax(0, max-content));
+}
+
 .progress-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -797,7 +873,7 @@ h1 {
     left: max(10px, env(safe-area-inset-left, 0px));
     z-index: 40;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     padding: 5px;
     border-radius: 15px;
   }
@@ -885,6 +961,8 @@ h1 {
   .form-actions,
   .habit-actions { align-items: stretch; }
   .invite-actions { grid-template-columns: 1fr; }
+  .home-dashboard { grid-template-columns: 1fr; }
+  .register-actions { grid-template-columns: 1fr; }
   .habit-actions { width: 100%; }
   .habit-actions > * { flex: 1 1 0; }
   .form-actions .primary-button,

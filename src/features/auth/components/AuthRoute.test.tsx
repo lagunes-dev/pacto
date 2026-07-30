@@ -25,7 +25,7 @@ describe("authentication boundary", () => {
     await user.type(screen.getByLabelText("Correo electrónico"), "owner@example.com");
     await user.type(screen.getByLabelText("Contraseña"), "private-pass");
     await user.click(screen.getByRole("button", { name: "Registrarme" }));
-    expect(await screen.findByRole("heading", { name: "Tu progreso personal" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "La próxima decisión sí cuenta." })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Cerrar sesión" }));
     expect(await screen.findByRole("heading", { name: "Vuelve a tus decisiones." })).toBeInTheDocument();

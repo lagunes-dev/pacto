@@ -14,7 +14,7 @@ export function AuthRoute({ mode }: { mode: "login" | "register" }) {
   const isRegister = mode === "register";
 
   if (isResolving) return <p role="status">Comprobando sesión…</p>;
-  if (session) return <Navigate to="/progress" replace />;
+  if (session) return <Navigate to="/inicio" replace />;
   if (sessionError) return <p className="field-error" role="alert">Autenticación no disponible: {sessionError}</p>;
 
   async function submit(event: FormEvent) {
@@ -36,7 +36,7 @@ export function AuthRoute({ mode }: { mode: "login" | "register" }) {
       } else {
         await login(parsed.data);
       }
-      const destination = (location.state as { from?: string } | null)?.from ?? "/progress";
+      const destination = (location.state as { from?: string } | null)?.from ?? "/inicio";
       navigate(destination, { replace: true });
     } catch (error) {
       setErrors({ form: error instanceof Error ? error.message : "No se pudo completar el acceso." });

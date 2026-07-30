@@ -5,7 +5,7 @@ async function register(page: Page, email: string) {
   await page.getByLabel("Correo electrónico").fill(email);
   await page.getByLabel("Contraseña").fill("private-pass");
   await page.getByRole("button", { name: "Registrarme" }).click();
-  await expect(page.getByRole("heading", { name: "Tu progreso personal" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "La próxima decisión sí cuenta." })).toBeVisible();
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
@@ -29,7 +29,8 @@ test("redirects an unauthenticated private deep link to the public auth layout",
 test("renders deterministic owner-scoped fixture data", async ({ page }, testInfo) => {
   const suffix = testInfo.project.name.replace(/\W/g, "-");
   await register(page, `owner-${suffix}@example.com`);
-  const createHabit = page.getByRole("link", { name: "Crear hábito" }).first();
+  await page.getByRole("link", { name: "Registro" }).first().click();
+  const createHabit = page.getByRole("link", { name: "Administrar hábitos personales" });
   await expect(createHabit).toBeVisible();
   await createHabit.click();
   await page.getByLabel("Nombre").fill("Owner private walk");
@@ -68,7 +69,8 @@ test.describe("narrow mobile shell", () => {
         const rect = element.getBoundingClientRect();
         return rect.width >= 44 && rect.height >= 44;
       }))).toBe(true);
-      await page.getByRole("link", { name: "Crear hábito" }).first().click();
+      await page.getByRole("link", { name: "Registro", exact: true }).click();
+      await page.getByRole("link", { name: "Administrar hábitos personales" }).click();
       await expect(page.getByRole("heading", { name: "Crear un hábito" })).toBeVisible();
       await page.getByLabel("Nombre").fill(`Decisión ${viewport}`);
       await page.getByRole("button", { name: "Crear hábito" }).click();

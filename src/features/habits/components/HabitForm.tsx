@@ -99,7 +99,7 @@ export function HabitForm() {
         <div className="form-actions habit-form-actions">
           <button className="primary-button" type="submit" disabled={pending}>{pending ? "Guardando…" : editing ? "Guardar cambios" : "Crear hábito"}</button>
           {editing && <button className="secondary-button" type="button" onClick={cancelEdit}>Cancelar edición</button>}
-          <Link className="secondary-button" to="/progress">Ver progreso</Link>
+          <Link className="secondary-button" to="/progreso">Ver progreso</Link>
         </div>
       </form>
 

@@ -1,5 +1,5 @@
 import type { PropsWithChildren, ReactNode } from "react";
-import { NavLink, useLocation } from "react-router";
+import { Link, NavLink, useLocation } from "react-router";
 
 import { appConfig } from "../../app/config";
 import { useAuth } from "../../features/auth/queries/AuthProvider";
@@ -7,30 +7,35 @@ import { InstallGuidance } from "../../pwa/InstallGuidance";
 import { useConnectivity } from "../../pwa/useConnectivity";
 
 type NavItem = {
-  to: string;
+  to: "/inicio" | "/registro" | "/progreso" | "/acuerdo";
   label: string;
+  title: string;
   icon: ReactNode;
+  matches: (path: string) => boolean;
 };
 
-const privateNavItems: NavItem[] = [
-  { to: "/habits/new", label: "Crear hábito", icon: <PlusIcon /> },
-  { to: "/progress", label: "Progreso", icon: <ChartIcon /> },
-  { to: "/partnership", label: "Vínculo", icon: <PeopleIcon /> },
+export const parityRoutes: NavItem[] = [
+  { to: "/inicio", label: "Inicio", title: "Tu siguiente decisión", icon: <HomeIcon />, matches: (path) => path === "/inicio" },
+  { to: "/registro", label: "Registro", title: "Registro y recuperación", icon: <RegisterIcon />, matches: (path) => path === "/registro" || path === "/habits/new" },
+  { to: "/progreso", label: "Progreso", title: "Aprendizajes personales", icon: <ChartIcon />, matches: (path) => path === "/progreso" || path === "/progress" },
+  { to: "/acuerdo", label: "Acuerdo", title: "Acuerdo compartido", icon: <PeopleIcon />, matches: (path) => path === "/acuerdo" || path.startsWith("/partnership") },
 ];
 
-function Navigation({ label, items, mobile = false }: { label: string; items: NavItem[]; mobile?: boolean }) {
+function Navigation({ label, path, mobile = false }: { label: string; path: string; mobile?: boolean }) {
   return (
     <nav className={mobile ? "mobile-nav glass" : "nav"} aria-label={label}>
-      {items.map((item) => (
-        <NavLink
+      {parityRoutes.map((item) => {
+        const current = item.matches(path);
+        return <Link
           key={`${label}-${item.to}`}
           to={item.to}
-          className={({ isActive }) => `nav-item${isActive ? " active" : ""}`}
+          className={`nav-item${current ? " active" : ""}`}
+          aria-current={current ? "page" : undefined}
         >
           {item.icon}
           <span>{item.label}</span>
-        </NavLink>
-      ))}
+        </Link>;
+      })}
     </nav>
   );
 }
@@ -39,8 +44,8 @@ export function AppShell({ children }: PropsWithChildren) {
   const location = useLocation();
   const { session } = useAuth();
   const isOnline = useConnectivity();
-  const navItems = session ? privateNavItems : [{ to: "/sign-in", label: "Acceso", icon: <LockIcon /> }];
-  const title = location.pathname.startsWith("/partnership") ? "Vínculo y consentimiento" : location.pathname === "/progress" ? "Progreso personal" : "Espacio privado";
+  const activeRoute = parityRoutes.find((route) => route.matches(location.pathname));
+  const title = activeRoute?.title ?? "Espacio privado";
   const today = new Intl.DateTimeFormat(appConfig.locale, {
     weekday: "long",
     day: "numeric",
@@ -53,7 +58,7 @@ export function AppShell({ children }: PropsWithChildren) {
         Saltar al contenido
       </a>
       <aside className="sidebar glass" aria-label="Barra lateral">
-        <NavLink className="brand" to="/sign-in" aria-label="Pacto, inicio">
+        <NavLink className="brand" to={session ? "/inicio" : "/sign-in"} aria-label="Pacto, inicio">
           <span className="brand-mark" aria-hidden="true">P</span>
           <span>
             <strong className="brand-title">Pacto</strong>
@@ -61,7 +66,7 @@ export function AppShell({ children }: PropsWithChildren) {
           </span>
         </NavLink>
         <p className="nav-label">Espacio personal</p>
-        <Navigation label="Navegación principal" items={navItems} />
+        {session && <Navigation label="Navegación principal" path={location.pathname} />}
         <div className="privacy-note">
           <LockIcon />
           <span>Tu información permanece privada.</span>
@@ -98,14 +103,18 @@ export function AppShell({ children }: PropsWithChildren) {
       </div>
 
         <div className="safe-area-bottom">
-          <Navigation label="Navegación móvil" items={navItems} mobile />
+          {session && <Navigation label="Navegación móvil" path={location.pathname} mobile />}
         </div>
     </div>
   );
 }
 
-function PlusIcon() {
-  return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>;
+function HomeIcon() {
+  return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m4 11 8-7 8 7v9H4Z" /><path d="M9 20v-6h6v6" /></svg>;
+}
+
+function RegisterIcon() {
+  return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5z" /><path d="M8 8h8M8 12h8M8 16h5" /></svg>;
 }
 
 function ChartIcon() {
