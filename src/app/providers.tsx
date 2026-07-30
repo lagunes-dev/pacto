@@ -10,6 +10,7 @@ import type { PreferenceRepository } from "../features/preferences/repository";
 import type { SupportRepository } from "../features/support/repository";
 import type { OfflineQueuePort } from "../features/offline-queue/port";
 import type { RealtimePort } from "../features/realtime/port";
+import type { PushSubscriptionPort } from "../features/push/port";
 import { RealtimeCoordinator } from "../features/realtime/RealtimeCoordinator";
 import { createAppServices, type AppServices } from "../infrastructure";
 
@@ -22,11 +23,12 @@ type ProviderOverrides = {
   supportRepository?: SupportRepository;
   offlineQueue?: OfflineQueuePort;
   realtime?: RealtimePort;
+  push?: PushSubscriptionPort;
 };
 
 const RepositoryContext = createContext<Omit<AppServices, "auth" | "offlineQueue"> | null>(null);
 
-export function AppProviders({ children, authPort, habitRepository, progressRepository, partnershipRepository, preferenceRepository, supportRepository, offlineQueue, realtime }: PropsWithChildren<ProviderOverrides>) {
+export function AppProviders({ children, authPort, habitRepository, progressRepository, partnershipRepository, preferenceRepository, supportRepository, offlineQueue, realtime, push }: PropsWithChildren<ProviderOverrides>) {
   const [services] = useState(() => createAppServices());
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
   const repositories = {
@@ -36,6 +38,7 @@ export function AppProviders({ children, authPort, habitRepository, progressRepo
     preferences: preferenceRepository ?? services.preferences,
     support: supportRepository ?? services.support,
     realtime: realtime ?? services.realtime,
+    push: push ?? services.push,
   };
 
   return (

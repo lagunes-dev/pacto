@@ -14,6 +14,9 @@ import { asLifecycleClient, createSupabaseLifecycleRepositories } from "./supaba
 import { asPrivateDataClient, createSupabasePrivateRepositories } from "./supabase/repositories/private";
 import { createIndexedDbOfflineQueue } from "./indexeddb/offlineQueue";
 import { createSupabaseRealtimePort } from "./supabase/realtime";
+import type { PushSubscriptionPort } from "../features/push/port";
+import { createUnavailablePushPort } from "../features/push/port";
+import { createSupabasePushPort } from "./supabase/push";
 
 export type AppServices = {
   auth: AuthPort;
@@ -24,6 +27,7 @@ export type AppServices = {
   support: SupportRepository;
   offlineQueue: OfflineQueuePort;
   realtime: RealtimePort;
+  push: PushSubscriptionPort;
 };
 
 export type AppEnvironment = {
@@ -31,6 +35,7 @@ export type AppEnvironment = {
   isDevelopment: boolean;
   supabaseUrl: string;
   supabasePublishableKey: string;
+  vapidPublicKey?: string;
 };
 
 function readEnvironment(): AppEnvironment {
@@ -39,12 +44,13 @@ function readEnvironment(): AppEnvironment {
     isDevelopment: import.meta.env.DEV,
     supabaseUrl: import.meta.env.VITE_SUPABASE_URL ?? "",
     supabasePublishableKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "",
+    vapidPublicKey: import.meta.env.VITE_VAPID_PUBLIC_KEY ?? "",
   };
 }
 
 export function createAppServices(environment = readEnvironment()): AppServices {
   const offlineQueue = createIndexedDbOfflineQueue();
-  if (environment.adapter === "fixture" && environment.isDevelopment) return { ...createFixtureServices(), offlineQueue, realtime: createUnavailableRealtimePort() };
+  if (environment.adapter === "fixture" && environment.isDevelopment) return { ...createFixtureServices(), offlineQueue, realtime: createUnavailableRealtimePort(), push: createUnavailablePushPort() };
 
   const config = { url: environment.supabaseUrl, publishableKey: environment.supabasePublishableKey };
   if (environment.adapter === "supabase" && isSupabaseConfigured(config)) {
@@ -57,6 +63,7 @@ export function createAppServices(environment = readEnvironment()): AppServices 
       ...lifecycleRepositories,
       offlineQueue,
       realtime: createSupabaseRealtimePort(client),
+      push: createSupabasePushPort(client, environment.vapidPublicKey ?? ""),
     };
   }
 
@@ -86,7 +93,7 @@ export function createAppServices(environment = readEnvironment()): AppServices 
   };
   const preferences: PreferenceRepository = { getMine: unavailable, updateMine: unavailable };
   const support: SupportRepository = { list: unavailable, create: unavailable, acknowledge: unavailable, close: unavailable };
-  return { auth, habits, progress, partnership, preferences, support, offlineQueue, realtime: createUnavailableRealtimePort() };
+  return { auth, habits, progress, partnership, preferences, support, offlineQueue, realtime: createUnavailableRealtimePort(), push: createUnavailablePushPort() };
 }
 
 export function createAuthPort(): AuthPort { return createAppServices().auth; }

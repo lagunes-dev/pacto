@@ -27,6 +27,7 @@ const rollback = readFileSync(`${root}/${rollbackPath}`, "utf8");
 const runtimeTestPaths = [
   "supabase/tests/authorization_rls.sql",
   "supabase/tests/lifecycle_rpcs.sql",
+  "supabase/tests/realtime_push_rls.sql",
 ];
 const runtimeAssertions = runtimeTestPaths.map((path) => readFileSync(`${root}/${path}`, "utf8")).join("\n");
 const protectedTables = [
@@ -77,6 +78,10 @@ const assertions = [
   [realtimePush.includes("enable row level security") && realtimePush.includes("force row level security") && realtimePush.includes("partnership_realtime_state_owner_select") && realtimePush.includes("recipient_id = (select auth.uid())"), "Realtime state is protected by forced owner-only RLS"],
   [realtimePush.includes("sync_partnership_realtime_state_trigger") && realtimePush.includes("after insert or update of invitee_id, status") && realtimePush.includes("on conflict (recipient_id) do update"), "Realtime state trigger is rerunnable and tracks partnership changes"],
   [realtimePush.includes("supabase_realtime") && realtimePush.includes("partnership_realtime_state") && realtimePush.includes("alter publication supabase_realtime add table"), "Realtime publication registration is conditional and allowlisted"],
+  [realtimePush.includes("create table if not exists public.push_subscriptions") && realtimePush.includes("endpoint text not null unique") && realtimePush.includes("p256dh text not null") && realtimePush.includes("auth text not null"), "push subscriptions persist only owner routing material"],
+  [realtimePush.includes("protect_push_subscription_owner_trigger") && realtimePush.includes("push subscription owner is immutable"), "push subscription ownership is immutable"],
+  [(realtimePush.match(/create policy push_subscriptions_owner_/g) ?? []).length === 3 && realtimePush.includes("force row level security") && realtimePush.includes("user_id = (select auth.uid())"), "push subscription access is owner-only under forced RLS"],
+  [runtimeAssertions.includes("foreign push subscription was disclosed") && runtimeAssertions.includes("owner idempotent push upsert failed"), "runtime SQL covers foreign denial and owner idempotent upsert"],
   [migrationPaths.indexOf("supabase/migrations/202607300001_realtime_push.sql") > migrationPaths.indexOf("supabase/migrations/202607290005_qualify_support_returning.sql"), "Realtime push migration runs after the existing migration chain"],
   [lifecycle.includes("drop function if exists public.create_partnership_invite(text);\ncreate or replace function public.create_partnership_invite(target_email text)"), "base lifecycle migration drops the exact invite signature before recreation"],
   [lifecycleRpcs.slice(-3).every((rpc) => fullResponse.includes(`grant execute on function public.${rpc} to authenticated`)), "full response migration preserves explicit authenticated support RPC grants"],

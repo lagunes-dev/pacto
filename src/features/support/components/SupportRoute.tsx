@@ -3,10 +3,45 @@ import { Link } from "react-router";
 
 import { supportTypes, type SupportType } from "../model";
 import { useAcknowledgeSupportRequest, useCloseSupportRequest, useCreateSupportRequest, useSupportRequests } from "../queries";
+import type { PushStatus, PushSubscriptionPort } from "../../push/port";
+import { useRepositories } from "../../../app/providers";
 
 const labels: Record<SupportType, string> = { encouragement: "Aliento", check_in: "Conversar", practical_help: "Ayuda práctica" };
 
+const pushMessages: Record<PushStatus, string> = {
+  unsupported: "Este navegador no admite notificaciones.",
+  default: "Las notificaciones están desactivadas. Solo se pedirá permiso si elegís activarlas.",
+  denied: "El permiso para notificaciones está bloqueado en el navegador.",
+  enabled: "Las notificaciones de apoyo están activadas en este navegador.",
+  unavailable: "Las notificaciones no están disponibles en este momento.",
+};
+
+export function PushSubscriptionControls({ port }: { port: PushSubscriptionPort }) {
+  const [status, setStatus] = useState<PushStatus>("unavailable");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void port.status().then((next) => { if (active) setStatus(next); });
+    return () => { active = false; };
+  }, [port]);
+
+  const change = async (action: "activate" | "revoke") => {
+    setBusy(true);
+    setStatus(await port[action]());
+    setBusy(false);
+  };
+
+  return <div className="consent-form" aria-labelledby="push-title">
+    <h2 id="push-title">Notificaciones de apoyo</h2>
+    <p role="status" aria-live="polite">{pushMessages[status]}</p>
+    {status === "default" && <button className="primary-button" disabled={busy} type="button" onClick={() => void change("activate")}>Activar notificaciones</button>}
+    {status === "enabled" && <button className="text-button" disabled={busy} type="button" onClick={() => void change("revoke")}>Desactivar notificaciones</button>}
+  </div>;
+}
+
 export function SupportRoute() {
+  const { push } = useRepositories();
   const requests = useSupportRequests();
   const create = useCreateSupportRequest();
   const acknowledge = useAcknowledgeSupportRequest();
@@ -23,6 +58,7 @@ export function SupportRoute() {
     <p className="sr-announcement" role="status" aria-live="polite">{announcement}</p>
     {error && <div ref={errorRef} tabIndex={-1} className="service-alert" role="alert">La solicitud no está disponible.</div>}
     {requests.isPending && <p role="status">Cargando solicitudes…</p>}
+    <PushSubscriptionControls port={push} />
     {requests.data && <><form className="consent-form" onSubmit={(event) => { event.preventDefault(); const type = new FormData(event.currentTarget).get("type") as SupportType; create.mutate(type, { onSuccess: () => setAnnouncement("Solicitud de apoyo creada.") }); }}>
       <label htmlFor="support-type">Tipo de apoyo</label><select id="support-type" name="type">{supportTypes.map((type) => <option key={type} value={type}>{labels[type]}</option>)}</select>
       <button className="primary-button" disabled={busy} type="submit">Solicitar apoyo</button>
