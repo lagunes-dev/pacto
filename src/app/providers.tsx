@@ -8,6 +8,7 @@ import type { ProgressRepository } from "../features/progress/repository";
 import type { PartnershipRepository } from "../features/partnership/repository";
 import type { PreferenceRepository } from "../features/preferences/repository";
 import type { SupportRepository } from "../features/support/repository";
+import type { OfflineQueuePort } from "../features/offline-queue/port";
 import { createAppServices, type AppServices } from "../infrastructure";
 
 type ProviderOverrides = {
@@ -17,11 +18,12 @@ type ProviderOverrides = {
   partnershipRepository?: PartnershipRepository;
   preferenceRepository?: PreferenceRepository;
   supportRepository?: SupportRepository;
+  offlineQueue?: OfflineQueuePort;
 };
 
-const RepositoryContext = createContext<Omit<AppServices, "auth"> | null>(null);
+const RepositoryContext = createContext<Omit<AppServices, "auth" | "offlineQueue"> | null>(null);
 
-export function AppProviders({ children, authPort, habitRepository, progressRepository, partnershipRepository, preferenceRepository, supportRepository }: PropsWithChildren<ProviderOverrides>) {
+export function AppProviders({ children, authPort, habitRepository, progressRepository, partnershipRepository, preferenceRepository, supportRepository, offlineQueue }: PropsWithChildren<ProviderOverrides>) {
   const [services] = useState(() => createAppServices());
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
   const repositories = {
@@ -34,7 +36,7 @@ export function AppProviders({ children, authPort, habitRepository, progressRepo
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider authPort={authPort ?? services.auth}>
+      <AuthProvider authPort={authPort ?? services.auth} offlineQueue={offlineQueue ?? services.offlineQueue}>
         <RepositoryContext.Provider value={repositories}>{children}</RepositoryContext.Provider>
       </AuthProvider>
     </QueryClientProvider>
