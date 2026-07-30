@@ -12,6 +12,7 @@ const migrationPaths = [
   "supabase/migrations/202607290003_lifecycle_rpc_contracts.sql",
   "supabase/migrations/202607290004_profile_bootstrap_lifecycle.sql",
   "supabase/migrations/202607290005_qualify_support_returning.sql",
+  "supabase/migrations/202607300001_realtime_push.sql",
 ];
 const migrations = migrationPaths.map((path) => readFileSync(`${root}/${path}`, "utf8"));
 const [schema, policies, lifecycle] = migrations;
@@ -20,6 +21,7 @@ const fullResponse = migrations[4];
 const finalContracts = migrations[5];
 const profileBootstrap = migrations[6];
 const qualifiedSupport = migrations[7];
+const realtimePush = migrations[8];
 const rollbackPath = "supabase/rollback/202607280003_fail_closed_authorization.sql";
 const rollback = readFileSync(`${root}/${rollbackPath}`, "utf8");
 const runtimeTestPaths = [
@@ -71,6 +73,11 @@ const assertions = [
   [qualifiedSupport.includes("drop function if exists public.create_support_request(text)") && qualifiedSupport.includes("public.support_requests.requester_id") && !qualifiedSupport.match(/returning id, requester_id,/) && (qualifiedSupport.match(/returning /g) ?? []).length === 3, "qualified support migration removes ambiguous RETURNING references from every support RPC"],
   [(qualifiedSupport.match(/security definer/g) ?? []).length === (qualifiedSupport.match(/set search_path = ''/g) ?? []).length && qualifiedSupport.includes("private.require_actor()") && qualifiedSupport.includes("private.active_partnership_id()"), "qualified support migration preserves secure identity and fixed search paths"],
   [qualifiedSupport.includes("revoke all on function public.create_support_request(text), public.acknowledge_support_request(uuid), public.close_support_request(uuid) from public, anon, authenticated") && qualifiedSupport.includes("grant execute on function public.create_support_request(text), public.acknowledge_support_request(uuid), public.close_support_request(uuid) to authenticated"), "qualified support migration preserves authenticated-only RPC grants"],
+  [realtimePush.includes("create table if not exists public.partnership_realtime_state") && realtimePush.includes("recipient_id uuid primary key") && realtimePush.includes("status text not null check"), "Realtime state table is owner-addressed and status-constrained"],
+  [realtimePush.includes("enable row level security") && realtimePush.includes("force row level security") && realtimePush.includes("partnership_realtime_state_owner_select") && realtimePush.includes("recipient_id = (select auth.uid())"), "Realtime state is protected by forced owner-only RLS"],
+  [realtimePush.includes("sync_partnership_realtime_state_trigger") && realtimePush.includes("after insert or update of invitee_id, status") && realtimePush.includes("on conflict (recipient_id) do update"), "Realtime state trigger is rerunnable and tracks partnership changes"],
+  [realtimePush.includes("supabase_realtime") && realtimePush.includes("partnership_realtime_state") && realtimePush.includes("alter publication supabase_realtime add table"), "Realtime publication registration is conditional and allowlisted"],
+  [migrationPaths.indexOf("supabase/migrations/202607300001_realtime_push.sql") > migrationPaths.indexOf("supabase/migrations/202607290005_qualify_support_returning.sql"), "Realtime push migration runs after the existing migration chain"],
   [lifecycle.includes("drop function if exists public.create_partnership_invite(text);\ncreate or replace function public.create_partnership_invite(target_email text)"), "base lifecycle migration drops the exact invite signature before recreation"],
   [lifecycleRpcs.slice(-3).every((rpc) => fullResponse.includes(`grant execute on function public.${rpc} to authenticated`)), "full response migration preserves explicit authenticated support RPC grants"],
   [migrationPaths.indexOf("supabase/migrations/202607290001_support_rpc_response_compatibility.sql") > migrationPaths.indexOf("supabase/migrations/202607280003_lifecycle_rpcs.sql"), "compatibility migration runs after lifecycle RPCs"],

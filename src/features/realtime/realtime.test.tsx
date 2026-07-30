@@ -1,4 +1,6 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, useQueryClient } from "@tanstack/react-query";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { partnershipKeys } from "../partnership/queries";
@@ -6,6 +8,12 @@ import { preferenceKeys } from "../preferences/queries";
 import { supportKeys } from "../support/queries";
 import { createSupabaseRealtimePort } from "../../infrastructure/supabase/realtime";
 import { createRealtimeLifecycle, type RealtimePort, type RealtimeSubscription } from "./port";
+import { AppProviders } from "../../app/providers";
+import type { AuthPort } from "../auth/port";
+import type { OfflineQueuePort } from "../offline-queue/port";
+import type { PartnershipRepository } from "../partnership/repository";
+import type { PartnershipView } from "../partnership/model";
+import { useAuth } from "../auth/queries/AuthProvider";
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -122,5 +130,47 @@ describe("Supabase realtime filters", () => {
     expect(onInactive).toHaveBeenCalledOnce();
     await cleanup();
     expect(client.removeChannel).toHaveBeenCalledWith(channel);
+  });
+});
+
+describe("mounted realtime coordinator", () => {
+  it("cleans up when partnership status becomes inactive and on sign-out", async () => {
+    const mock = createMockPort();
+    let status: PartnershipView["status"] = "active";
+    const session = { user: { id: "actor-a", email: "a@example.com" } };
+    const authPort: AuthPort = {
+      getSession: async () => session,
+      register: vi.fn(),
+      login: vi.fn(),
+      logout: vi.fn(async () => undefined),
+    };
+    const offlineQueue: OfflineQueuePort = {
+      activateActor: vi.fn(async () => undefined),
+      enqueue: vi.fn(),
+      list: vi.fn(),
+      purge: vi.fn(),
+    } as unknown as OfflineQueuePort;
+    const partnershipRepository: PartnershipRepository = {
+      getMine: async () => ({ id: "partnership-a", status, partner: { userId: "partner", displayName: "Partner" }, createdAt: "", updatedAt: "" }),
+      createInvite: vi.fn(), acceptInvite: vi.fn(), rejectInvite: vi.fn(), cancelInvite: vi.fn(), pause: vi.fn(), end: vi.fn(),
+    } as unknown as PartnershipRepository;
+    function Probe() {
+      const client = useQueryClient();
+      const auth = useAuth();
+      return <><button onClick={() => { status = "paused"; void client.invalidateQueries({ queryKey: partnershipKeys.mine(session.user.id) }); }}>pause</button><button onClick={() => void client.invalidateQueries({ queryKey: partnershipKeys.mine(session.user.id) })}>refresh</button><button onClick={() => void auth.logout()}>sign out</button></>;
+    }
+
+    const user = userEvent.setup();
+    render(<AppProviders authPort={authPort} offlineQueue={offlineQueue} partnershipRepository={partnershipRepository} realtime={mock.port}><Probe /></AppProviders>);
+    await screen.findByRole("button", { name: "pause" });
+    await waitFor(() => expect(mock.subscriptions).toHaveLength(1));
+    await user.click(screen.getByRole("button", { name: "pause" }));
+    await waitFor(() => expect(mock.cleanups[0]).toHaveBeenCalledOnce());
+    status = "active";
+    await user.click(screen.getByRole("button", { name: "refresh" }));
+    await waitFor(() => expect(mock.subscriptions).toHaveLength(2));
+    await user.click(screen.getByRole("button", { name: "sign out" }));
+    await waitFor(() => expect(authPort.logout).toHaveBeenCalledOnce());
+    await waitFor(() => expect(mock.cleanups[1]).toHaveBeenCalledOnce());
   });
 });
