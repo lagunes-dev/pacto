@@ -13,6 +13,7 @@ const migrationPaths = [
   "supabase/migrations/202607290004_profile_bootstrap_lifecycle.sql",
   "supabase/migrations/202607290005_qualify_support_returning.sql",
   "supabase/migrations/202607300001_realtime_push.sql",
+  "supabase/migrations/202607300002_daily_checkin_rpc.sql",
 ];
 const migrations = migrationPaths.map((path) => readFileSync(`${root}/${path}`, "utf8"));
 const [schema, policies, lifecycle] = migrations;
@@ -22,12 +23,14 @@ const finalContracts = migrations[5];
 const profileBootstrap = migrations[6];
 const qualifiedSupport = migrations[7];
 const realtimePush = migrations[8];
+const dailyCheckin = migrations[9];
 const rollbackPath = "supabase/rollback/202607280003_fail_closed_authorization.sql";
 const rollback = readFileSync(`${root}/${rollbackPath}`, "utf8");
 const runtimeTestPaths = [
   "supabase/tests/authorization_rls.sql",
   "supabase/tests/lifecycle_rpcs.sql",
   "supabase/tests/realtime_push_rls.sql",
+  "supabase/tests/daily_checkin_rpc.sql",
 ];
 const runtimeAssertions = runtimeTestPaths.map((path) => readFileSync(`${root}/${path}`, "utf8")).join("\n");
 const envExample = readFileSync(`${root}/.env.example`, "utf8");
@@ -85,6 +88,12 @@ const assertions = [
   [realtimePush.includes("protect_push_subscription_owner_trigger") && realtimePush.includes("push subscription owner is immutable"), "push subscription ownership is immutable"],
   [(realtimePush.match(/create policy push_subscriptions_owner_/g) ?? []).length === 3 && realtimePush.includes("force row level security") && realtimePush.includes("user_id = (select auth.uid())"), "push subscription access is owner-only under forced RLS"],
   [runtimeAssertions.includes("foreign push subscription was disclosed") && runtimeAssertions.includes("owner idempotent push upsert failed"), "runtime SQL covers foreign denial and owner idempotent upsert"],
+  [dailyCheckin.includes("security invoker") && !dailyCheckin.includes("security definer"), "daily check-in RPC runs as SECURITY INVOKER"],
+  [dailyCheckin.includes("auth.uid()") && dailyCheckin.includes("America/Mexico_City") && dailyCheckin.includes("pg_timezone_names"), "daily check-in derives actor and validated local day server-side"],
+  [dailyCheckin.includes("on conflict (user_id, entry_date) do update") && dailyCheckin.includes("on conflict (daily_entry_id, goal_id) do update"), "daily and habit rows are idempotently upserted in one RPC"],
+  [dailyCheckin.includes("revoke all on function public.save_daily_checkin(text, smallint, jsonb) from public, anon, authenticated") && dailyCheckin.includes("grant execute on function public.save_daily_checkin(text, smallint, jsonb) to authenticated"), "daily check-in execution is authenticated-only"],
+  [!dailyCheckin.includes("private_notes") && !dailyCheckin.includes("shared_daily_summaries") && !dailyCheckin.includes("support_requests"), "daily check-in RPC cannot write private or shared data"],
+  [runtimeAssertions.includes("foreign owner goal was accepted") && runtimeAssertions.includes("repeat save created more than one owner/local-day row") && runtimeAssertions.includes("daily check-in RPC is not security invoker"), "runtime SQL covers check-in owner isolation, idempotence, and invoker security"],
   [migrationPaths.indexOf("supabase/migrations/202607300001_realtime_push.sql") > migrationPaths.indexOf("supabase/migrations/202607290005_qualify_support_returning.sql"), "Realtime push migration runs after the existing migration chain"],
   [lifecycle.includes("drop function if exists public.create_partnership_invite(text);\ncreate or replace function public.create_partnership_invite(target_email text)"), "base lifecycle migration drops the exact invite signature before recreation"],
   [lifecycleRpcs.slice(-3).every((rpc) => fullResponse.includes(`grant execute on function public.${rpc} to authenticated`)), "full response migration preserves explicit authenticated support RPC grants"],

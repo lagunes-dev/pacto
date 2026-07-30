@@ -4,6 +4,7 @@ import type { ProgressRepository } from "../features/progress/repository";
 import type { PartnershipRepository } from "../features/partnership/repository";
 import type { PreferenceRepository } from "../features/preferences/repository";
 import type { SupportRepository } from "../features/support/repository";
+import type { DailyCheckinRepository } from "../features/checkin/repository";
 import type { OfflineQueuePort } from "../features/offline-queue/port";
 import type { RealtimePort } from "../features/realtime/port";
 import { createUnavailableRealtimePort } from "../features/realtime/port";
@@ -17,6 +18,7 @@ import { createSupabaseRealtimePort } from "./supabase/realtime";
 import type { PushSubscriptionPort } from "../features/push/port";
 import { createUnavailablePushPort } from "../features/push/port";
 import { createSupabasePushPort } from "./supabase/push";
+import { asCheckinClient, createSupabaseDailyCheckinRepository } from "./supabase/repositories/checkin";
 
 export type AppServices = {
   auth: AuthPort;
@@ -25,6 +27,7 @@ export type AppServices = {
   partnership: PartnershipRepository;
   preferences: PreferenceRepository;
   support: SupportRepository;
+  checkin: DailyCheckinRepository;
   offlineQueue: OfflineQueuePort;
   realtime: RealtimePort;
   push: PushSubscriptionPort;
@@ -63,6 +66,7 @@ export function createAppServices(environment = readEnvironment()): AppServices 
       auth: createSupabaseAuthPort(client),
       ...privateRepositories,
       ...lifecycleRepositories,
+      checkin: createSupabaseDailyCheckinRepository(asCheckinClient(client)),
       offlineQueue,
       realtime: createSupabaseRealtimePort(client),
       push: createSupabasePushPort(client, environment.vapidPublicKey ?? ""),
@@ -95,7 +99,8 @@ export function createAppServices(environment = readEnvironment()): AppServices 
   };
   const preferences: PreferenceRepository = { getMine: unavailable, updateMine: unavailable };
   const support: SupportRepository = { list: unavailable, create: unavailable, acknowledge: unavailable, close: unavailable };
-  return { auth, habits, progress, partnership, preferences, support, offlineQueue, realtime: createUnavailableRealtimePort(), push: createUnavailablePushPort() };
+  const checkin: DailyCheckinRepository = { loadToday: unavailable, save: unavailable };
+  return { auth, habits, progress, partnership, preferences, support, checkin, offlineQueue, realtime: createUnavailableRealtimePort(), push: createUnavailablePushPort() };
 }
 
 export function createAuthPort(): AuthPort { return createAppServices().auth; }

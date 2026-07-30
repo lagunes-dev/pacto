@@ -6,17 +6,20 @@ import type { ProgressRepository } from "../../features/progress/repository";
 import type { PartnershipRepository } from "../../features/partnership/repository";
 import type { PreferenceRepository } from "../../features/preferences/repository";
 import type { SupportRepository } from "../../features/support/repository";
+import { saveDailyCheckinInputSchema, type SavedCheckin } from "../../features/checkin/model";
+import type { DailyCheckinRepository } from "../../features/checkin/repository";
+import { localDayAt, resolveTimezone } from "../../features/checkin/timezone";
 import { createPartnershipFixture } from "./partnership";
 
 type Account = { id: string; email: string; password: string; displayName: string };
 type PartnershipFixture = ReturnType<typeof createPartnershipFixture>;
-export type FixtureStore = { accounts: Account[]; habits: Habit[]; partnershipFixture?: PartnershipFixture };
+export type FixtureStore = { accounts: Account[]; habits: Habit[]; checkins: Map<string, SavedCheckin>; partnershipFixture?: PartnershipFixture };
 
 export function createFixtureStore(): FixtureStore {
-  return { accounts: [], habits: [] };
+  return { accounts: [], habits: [], checkins: new Map() };
 }
 
-export function createFixtureServices(store = createFixtureStore()) {
+export function createFixtureServices(store = createFixtureStore(), now: () => Date = () => new Date()) {
   let session: Session | null = null;
   const requireOwner = () => {
     if (!session) throw new Error("Authentication required.");
@@ -69,6 +72,50 @@ export function createFixtureServices(store = createFixtureStore()) {
     async getMine() { return { habits: await habits.listMine(), completedEntryCount: 0, activeDayCount: 0 }; },
   };
 
+  const checkin: DailyCheckinRepository = {
+    async loadToday(input = {}) {
+      const ownerId = requireOwner();
+      const timezone = resolveTimezone({
+        browserTimezone: input.browserTimezone,
+        browserTimezoneConfirmed: input.browserTimezoneConfirmed,
+      });
+      const entryDate = localDayAt(now(), timezone.timezone);
+      const saved = store.checkins.get(`${ownerId}:${entryDate}`) ?? null;
+      const answers = new Map(saved?.habits.map((answer) => [answer.goalId, answer]));
+      return {
+        entryDate,
+        timezone: timezone.timezone,
+        timezoneSource: timezone.source,
+        requiresBrowserConfirmation: timezone.requiresBrowserConfirmation,
+        goals: store.habits
+          .filter((habit) => habit.ownerId === ownerId && habit.active)
+          .map(({ id, name, priority }) => ({ id, name, priority, answer: answers.get(id) ?? null })),
+        saved: saved ? structuredClone(saved) : null,
+      };
+    },
+    async save(input) {
+      const ownerId = requireOwner();
+      const safe = saveDailyCheckinInputSchema.parse(input);
+      const activeIds = store.habits.filter((habit) => habit.ownerId === ownerId && habit.active).map(({ id }) => id).sort();
+      const submittedIds = safe.habits.map(({ goalId }) => goalId).sort();
+      if (activeIds.length !== submittedIds.length || activeIds.some((id, index) => id !== submittedIds[index])) {
+        throw new Error("Every active goal requires an answer.");
+      }
+      const entryDate = localDayAt(now(), safe.timezone);
+      const key = `${ownerId}:${entryDate}`;
+      const existing = store.checkins.get(key);
+      const saved: SavedCheckin = {
+        id: existing?.id ?? crypto.randomUUID(),
+        entryDate,
+        cravingLevel: safe.cravingLevel,
+        completedAt: now().toISOString(),
+        habits: structuredClone(safe.habits),
+      };
+      store.checkins.set(key, saved);
+      return structuredClone(saved);
+    },
+  };
+
   const consentServices = () => {
     const ownerId = requireOwner();
     if (store.accounts.length < 2) throw new Error("Partnership fixture unavailable.");
@@ -95,5 +142,5 @@ export function createFixtureServices(store = createFixtureStore()) {
     async close(id) { return consentServices().support.close(id); },
   };
 
-  return { auth, habits, progress, partnership, preferences, support };
+  return { auth, habits, progress, partnership, preferences, support, checkin };
 }
