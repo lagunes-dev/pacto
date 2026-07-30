@@ -5,6 +5,11 @@ import type { AuthPort } from "../../features/auth/port";
 import { createSupabaseBrowserClient, isSupabaseConfigured, type PactoSupabaseClient, type SupabasePublicConfig } from "./client";
 import { normalizeSupabaseAuthError, SupabaseConfigurationError } from "./errors";
 
+export function getAuthRedirectUrl(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  return new URL("/progress", window.location.origin).toString();
+}
+
 export function mapSupabaseSession(session: SupabaseSession | null): Session | null {
   if (!session) return null;
   return { user: { id: session.user.id, email: session.user.email ?? null } };
@@ -19,7 +24,11 @@ export function createSupabaseAuthPort(client: PactoSupabaseClient): AuthPort {
     },
     async register(credentials): Promise<RegistrationResult> {
       const email = credentials.email.trim().toLowerCase();
-      const { data, error } = await client.auth.signUp({ email, password: credentials.password });
+      const { data, error } = await client.auth.signUp({
+        email,
+        password: credentials.password,
+        options: { emailRedirectTo: getAuthRedirectUrl() },
+      });
       if (error) throw normalizeSupabaseAuthError(error);
       const session = mapSupabaseSession(data.session);
       return session

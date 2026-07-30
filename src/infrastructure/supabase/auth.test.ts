@@ -1,6 +1,6 @@
 import type { Session as SupabaseSession } from "@supabase/supabase-js";
 
-import { createSupabaseAuthBoundary, createSupabaseAuthPort, mapSupabaseSession } from "./auth";
+import { createSupabaseAuthBoundary, createSupabaseAuthPort, getAuthRedirectUrl, mapSupabaseSession } from "./auth";
 import type { PactoSupabaseClient } from "./client";
 
 const remoteSession = {
@@ -33,7 +33,18 @@ describe("Supabase public Auth boundary", () => {
       status: "authenticated",
       session: { user: { id: "user-a", email: "owner@example.com" } },
     });
-    expect(signUp).toHaveBeenCalledWith({ email: "owner@example.com", password: "private-pass" });
+    expect(signUp).toHaveBeenCalledWith({
+      email: "owner@example.com",
+      password: "private-pass",
+      options: { emailRedirectTo: getAuthRedirectUrl() },
+    });
+    expect(signUp.mock.calls[0][0].options.emailRedirectTo).toBe(`${window.location.origin}/progress`);
+  });
+
+  it("builds confirmation redirects from the current browser origin", () => {
+    const redirectUrl = new URL(getAuthRedirectUrl()!);
+    expect(redirectUrl.origin).toBe(window.location.origin);
+    expect(redirectUrl.pathname).toBe("/progress");
   });
 
   it("represents sign-up that requires email confirmation", async () => {
