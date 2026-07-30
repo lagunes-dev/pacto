@@ -33,6 +33,7 @@ export type AppServices = {
 export type AppEnvironment = {
   adapter: string;
   isDevelopment: boolean;
+  isE2E: boolean;
   supabaseUrl: string;
   supabasePublishableKey: string;
   vapidPublicKey?: string;
@@ -40,8 +41,9 @@ export type AppEnvironment = {
 
 function readEnvironment(): AppEnvironment {
   return {
-    adapter: import.meta.env.VITE_DATA_ADAPTER ?? "",
+    adapter: import.meta.env.MODE === "e2e" ? "fixture" : import.meta.env.VITE_DATA_ADAPTER ?? "",
     isDevelopment: import.meta.env.DEV,
+    isE2E: import.meta.env.MODE === "e2e",
     supabaseUrl: import.meta.env.VITE_SUPABASE_URL ?? "",
     supabasePublishableKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "",
     vapidPublicKey: import.meta.env.VITE_VAPID_PUBLIC_KEY ?? "",
@@ -50,7 +52,7 @@ function readEnvironment(): AppEnvironment {
 
 export function createAppServices(environment = readEnvironment()): AppServices {
   const offlineQueue = createIndexedDbOfflineQueue();
-  if (environment.adapter === "fixture" && environment.isDevelopment) return { ...createFixtureServices(), offlineQueue, realtime: createUnavailableRealtimePort(), push: createUnavailablePushPort() };
+  if (environment.adapter === "fixture" && (environment.isDevelopment || environment.isE2E)) return { ...createFixtureServices(), offlineQueue, realtime: createUnavailableRealtimePort(), push: createUnavailablePushPort() };
 
   const config = { url: environment.supabaseUrl, publishableKey: environment.supabasePublishableKey };
   if (environment.adapter === "supabase" && isSupabaseConfigured(config)) {

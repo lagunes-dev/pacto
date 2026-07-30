@@ -3,6 +3,7 @@ import { createAppServices, type AppEnvironment } from ".";
 const environment = (overrides: Partial<AppEnvironment> = {}): AppEnvironment => ({
   adapter: "supabase",
   isDevelopment: false,
+  isE2E: false,
   supabaseUrl: "",
   supabasePublishableKey: "",
   ...overrides,
@@ -28,6 +29,12 @@ describe("unavailable production consent services", () => {
 
   it("uses the fixture only when explicitly selected in development", async () => {
     const services = createAppServices(environment({ adapter: "fixture", isDevelopment: true }));
+
+    expect(await services.auth.getSession()).toBeNull();
+  });
+
+  it("uses the fixture only when explicitly selected in the compile-time e2e mode", async () => {
+    const services = createAppServices(environment({ adapter: "fixture", isE2E: true }));
 
     expect(await services.auth.getSession()).toBeNull();
   });
