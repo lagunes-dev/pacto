@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 
 import { SessionActions } from "../../auth/components/AuthRoute";
+import { DailyCheckinCard } from "../../checkin/components/DailyCheckinCard";
 import { usePersonalProgress } from "../../progress/queries";
 
 function message(error: unknown) {
@@ -35,17 +36,7 @@ export function HomeRoute() {
             <p>Los planes de recuperación se habilitarán en una entrega posterior. Este espacio no guarda respuestas todavía.</p>
           </article>
 
-          <article className="home-panel">
-            <p className="eyebrow">Check-in breve</p>
-            <h2>¿Cómo va tu día?</h2>
-            <p>El registro diario aún no está disponible. No interpretamos la falta de un registro como incumplimiento.</p>
-            {progress.isSuccess && progress.data.habits.length > 0 && (
-              <div className="home-habits" aria-label="Hábitos personales confirmados">
-                {progress.data.habits.map((habit) => <span key={habit.id}>{habit.name}</span>)}
-              </div>
-            )}
-            <Link className="secondary-button" to="/registro">Ver estado de Registro</Link>
-          </article>
+          <DailyCheckinCard />
 
           <div className="progress-grid" aria-label="Métricas personales confirmadas">
             <article><strong>{progress.isSuccess ? progress.data.habits.length : "—"}</strong><span>Hábitos personales</span></article>

@@ -682,6 +682,180 @@ h1 {
   font-size: 0.8rem;
 }
 
+.checkin-card {
+  display: grid;
+  gap: 1rem;
+}
+
+.checkin-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.checkin-heading h2,
+.checkin-heading p,
+.checkin-goal,
+.craving-field {
+  margin: 0;
+}
+
+.checkin-count {
+  flex: 0 0 auto;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  color: var(--color-sage);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.checkin-goals {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.checkin-goal,
+.craving-field {
+  min-width: 0;
+  padding: 0.9rem;
+  border: 1px solid var(--color-line);
+  border-radius: 0.85rem;
+}
+
+.checkin-goal legend,
+.craving-field legend {
+  padding-inline: 0.25rem;
+  color: var(--color-text);
+  font-weight: 800;
+}
+
+.checkin-segments,
+.craving-options,
+.trigger-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.checkin-segments button,
+.craving-options button,
+.trigger-chips button {
+  min-height: 44px;
+  border: 1px solid var(--color-line);
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.checkin-segments button {
+  flex: 1 1 7.5rem;
+  padding: 0.55rem 0.7rem;
+}
+
+.trigger-chips button {
+  padding: 0.5rem 0.7rem;
+  border-radius: 999px;
+}
+
+.checkin-segments button.is-selected,
+.craving-options button.is-selected,
+.trigger-chips button.is-selected {
+  border-color: var(--color-cream);
+  background: var(--color-cream);
+  color: #211f1a;
+}
+
+.trigger-field {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.75rem;
+}
+
+.trigger-field > span,
+.craving-field > span {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.craving-field {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.craving-options {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.craving-options button {
+  width: 100%;
+  padding: 0;
+}
+
+.timezone-confirmation {
+  display: flex;
+  align-items: start;
+  gap: 0.6rem;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+.timezone-confirmation input {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: 0.15rem;
+}
+
+.checkin-message,
+.checkin-success {
+  margin: 0;
+  padding: 0.8rem;
+  border-radius: 0.75rem;
+}
+
+.checkin-message {
+  border: 1px solid rgba(255, 210, 125, 0.35);
+  background: rgba(120, 78, 10, 0.2);
+  color: #ffe7b3;
+}
+
+.checkin-success {
+  border: 1px solid rgba(183, 223, 191, 0.3);
+  background: rgba(86, 145, 99, 0.18);
+  color: var(--color-sage);
+}
+
+.checkin-save {
+  width: 100%;
+}
+
+.checkin-save:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.checkin-privacy {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.checkin-segments button:focus-visible,
+.craving-options button:focus-visible,
+.trigger-chips button:focus-visible,
+.checkin-save:focus-visible,
+.timezone-confirmation input:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
 .register-actions {
   grid-template-columns: repeat(2, minmax(0, max-content));
 }
