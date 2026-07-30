@@ -13,8 +13,8 @@ export function ProgressRoute() {
   return (
     <section className="route-card progress-route" aria-labelledby="progress-title">
       <div className="route-heading">
-        <div><p className="eyebrow">Resumen privado</p><h1 id="progress-title">Tu progreso personal</h1></div>
-        <Link className="primary-button" to="/habits/new">Administrar hábitos</Link>
+        <div className="progress-heading-copy"><p className="eyebrow">Resumen privado</p><h1 id="progress-title">Tu progreso personal</h1></div>
+        <Link className="primary-button progress-manage-action" to="/habits/new">Administrar hábitos</Link>
       </div>
 
       {progress.isPending && <p role="status">Cargando tu progreso…</p>}

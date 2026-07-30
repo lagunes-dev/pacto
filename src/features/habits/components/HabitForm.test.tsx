@@ -123,6 +123,17 @@ describe("private habit and progress flow", () => {
     expect(screen.getByText(/todavía no registra un check-in/)).toBeInTheDocument();
   });
 
+  it("gives progress management a deliberate primary action", async () => {
+    const { services } = await ownerServices();
+    render(
+      <MemoryRouter><AppProviders authPort={services.auth} habitRepository={services.habits} progressRepository={services.progress}><ProgressRoute /></AppProviders></MemoryRouter>,
+    );
+
+    const action = await screen.findByRole("link", { name: "Administrar hábitos" });
+    expect(action).toHaveClass("progress-manage-action");
+    expect(action).toHaveAttribute("href", "/habits/new");
+  });
+
   it("retries a failed personal progress request", async () => {
     const user = userEvent.setup();
     const { services } = await ownerServices();

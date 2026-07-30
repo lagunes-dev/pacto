@@ -74,7 +74,18 @@ test.describe("narrow mobile shell", () => {
       await page.getByRole("button", { name: "Crear hábito" }).click();
       await page.getByRole("link", { name: "Progreso" }).first().click();
       await expect(page.getByRole("heading", { name: "Siguiente decisión" })).toBeVisible();
-      await page.getByRole("link", { name: "Administrar hábitos" }).click();
+      const manageHabits = page.getByRole("link", { name: "Administrar hábitos" });
+      await expect(manageHabits).toHaveCSS("min-height", "44px");
+      const actionLayout = await manageHabits.evaluate((element) => {
+        const action = element.getBoundingClientRect();
+        const headingCopy = document.querySelector(".progress-heading-copy")!.getBoundingClientRect();
+        return { width: action.width, height: action.height, viewport: window.innerWidth, topGap: action.top - headingCopy.bottom };
+      });
+      expect(actionLayout.height).toBeGreaterThanOrEqual(44);
+      expect(actionLayout.width).toBeGreaterThanOrEqual(viewport === 320 ? 250 : 280);
+      expect(actionLayout.width).toBeLessThanOrEqual(actionLayout.viewport);
+      expect(actionLayout.topGap).toBeGreaterThanOrEqual(0);
+      await manageHabits.click();
       await page.getByRole("button", { name: `Eliminar Decisión ${viewport}` }).click();
       await expect(page.getByRole("alertdialog")).toBeVisible();
       await expectNoHorizontalOverflow(page);
