@@ -9,8 +9,9 @@ describe("PWA generation", () => {
     });
   });
 
-  it("precaches only emitted public shell assets and has no runtime cache", () => {
+  it("precaches only emitted public shell assets and imports the fixed push handler", () => {
     expect(pwaOptions.workbox).toEqual({
+      importScripts: ["/push-handler.js"],
       globPatterns: ["**/*.{html,js,css,png}"],
       navigateFallback: "index.html",
       runtimeCaching: [],

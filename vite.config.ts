@@ -22,6 +22,7 @@ export const pwaOptions = {
     ],
   },
   workbox: {
+    importScripts: ["/push-handler.js"],
     globPatterns: ["**/*.{html,js,css,png}"],
     navigateFallback: "index.html",
     runtimeCaching: [],
