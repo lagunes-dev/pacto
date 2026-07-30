@@ -13,9 +13,15 @@ function makeQueue(now = () => 100) {
   });
 }
 
+async function activateQueue(now = () => 100, actorId = "actor-a") {
+  const queue = makeQueue(now);
+  await queue.activateActor(actorId);
+  return queue;
+}
+
 describe("actor-scoped offline queue", () => {
   it("stores a validated plan with idempotency and retry metadata", async () => {
-    const queue = makeQueue();
+    const queue = await activateQueue();
     const record = await queue.enqueue("actor-a", { kind: "plan", payload: { title: "Weekly plan" } });
 
     expect(record).toEqual({
@@ -26,27 +32,38 @@ describe("actor-scoped offline queue", () => {
   });
 
   it.each(["support", "partnership", "unknown"])("rejects the %s kind without writing", async (kind) => {
-    const queue = makeQueue();
+    const queue = await activateQueue();
     await expect(queue.enqueue("actor-a", { kind, payload: {} } as never)).rejects.toThrow("not supported");
     expect(await queue.list("actor-a")).toEqual([]);
   });
 
   it("validates minimal payloads before writing", async () => {
-    const queue = makeQueue();
+    const queue = await activateQueue();
     await expect(queue.enqueue("actor-a", { kind: "plan", payload: { title: "", token: "secret" } } as never)).rejects.toThrow();
     expect(await queue.list("actor-a")).toEqual([]);
   });
 
   it("lists only one actor in deterministic FIFO order, including equal timestamps", async () => {
     const clock = vi.fn().mockReturnValueOnce(200).mockReturnValueOnce(100).mockReturnValue(100);
-    const queue = makeQueue(clock);
+    const queue = await activateQueue(clock);
     await queue.enqueue("actor-a", { kind: "review", payload: { summary: "third" } });
     await queue.enqueue("actor-a", { kind: "plan", payload: { title: "first" } });
     await queue.enqueue("actor-a", { kind: "check-in", payload: { habitId: "h1", completed: true } });
-    await queue.enqueue("actor-b", { kind: "plan", payload: { title: "private" } });
-
     expect((await queue.list("actor-a")).map((record) => record.operationId)).toEqual(["100-01", "100-02", "200-00"]);
-    expect((await queue.list("actor-b")).map((record) => record.payload)).toEqual([{ title: "private" }]);
+  });
+
+  it("rejects unauthenticated, stale, and arbitrary actors without writing", async () => {
+    const queue = makeQueue();
+    const draft = { kind: "plan", payload: { title: "Private" } } as const;
+
+    await expect(queue.enqueue("actor-a", draft)).rejects.toThrow("authenticated active actor");
+    await queue.activateActor("actor-a");
+    await expect(queue.enqueue("actor-b", draft)).rejects.toThrow("authenticated active actor");
+    await queue.activateActor("actor-b");
+    await expect(queue.enqueue("actor-a", draft)).rejects.toThrow("authenticated active actor");
+
+    expect(await queue.list("actor-a")).toEqual([]);
+    expect(await queue.list("actor-b")).toEqual([]);
   });
 
   it("purges the departing actor on sign-out and actor change", async () => {
@@ -62,7 +79,7 @@ describe("actor-scoped offline queue", () => {
   });
 
   it("has no replay path and leaves records pending when connectivity changes", async () => {
-    const queue = makeQueue();
+    const queue = await activateQueue();
     const record = await queue.enqueue("actor-a", { kind: "plan", payload: { title: "Deferred" } });
     window.dispatchEvent(new Event("online"));
     expect(await queue.list("actor-a")).toEqual([record]);

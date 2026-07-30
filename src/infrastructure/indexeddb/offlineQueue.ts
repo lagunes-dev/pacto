@@ -58,6 +58,9 @@ export function createIndexedDbOfflineQueue(options: QueueOptions = {}): Offline
     },
     async enqueue<K extends QueueKind>(actorId: string, value: QueueDraft<K>) {
       if (!actorId.trim()) throw new Error("An authenticated actor is required.");
+      if (!activeActor || actorId !== activeActor) {
+        throw new Error("Queue actor must match the authenticated active actor.");
+      }
       const draft = parseQueueDraft(value) as QueueDraft<K>;
       const createdAt = now();
       const db = await getDatabase();
