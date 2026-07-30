@@ -30,6 +30,9 @@ const runtimeTestPaths = [
   "supabase/tests/realtime_push_rls.sql",
 ];
 const runtimeAssertions = runtimeTestPaths.map((path) => readFileSync(`${root}/${path}`, "utf8")).join("\n");
+const envExample = readFileSync(`${root}/.env.example`, "utf8");
+const readme = readFileSync(`${root}/README.md`, "utf8");
+const deploymentRunbook = readFileSync(`${root}/docs/supabase-deployment-security.md`, "utf8");
 const protectedTables = [
   "profiles", "partnerships", "sharing_preferences", "communication_preferences", "goals",
   "daily_entries", "habit_entries", "private_notes", "recovery_plans", "support_requests",
@@ -95,6 +98,13 @@ const assertions = [
   [protectedTables.every((table) => rollback.includes(`'${table}'`)) && rollback.includes("force row level security"), "rollback preserves forced RLS for every protected table"],
   [lifecycleRpcs.every((rpc) => rollback.includes(`revoke all on function public.${rpc}`)), "rollback revokes every public lifecycle RPC"],
   [!/^\s*(drop|truncate|delete)\b/im.test(rollback) && !rollback.includes("disable row level security"), "rollback retains data, schema, and RLS"],
+  [envExample.includes("VITE_VAPID_PUBLIC_KEY=") && !envExample.includes("VAPID_PRIVATE_KEY="), "browser env example exposes only the public VAPID key"],
+  [deploymentRunbook.includes("supabase db push --dry-run") && deploymentRunbook.includes("supabase db push"), "deployment runbook previews and applies hosted migrations"],
+  [deploymentRunbook.includes("supabase secrets set --env-file .env.vapid.local") && deploymentRunbook.includes("supabase functions deploy send-support-push"), "deployment runbook configures secrets and deploys the push function"],
+  [deploymentRunbook.includes("Realtime/RLS") && deploymentRunbook.includes("SKIPPED (BLOCKED)"), "deployment runbook defines truthful hosted Realtime and RLS evidence"],
+  [deploymentRunbook.includes("provider acceptance") && deploymentRunbook.includes("device display"), "deployment runbook separates provider acceptance from device display"],
+  [deploymentRunbook.includes("supabase functions delete send-support-push") && deploymentRunbook.includes("supabase secrets unset"), "deployment runbook includes function and secret cleanup"],
+  [readme.includes("VITE_VAPID_PUBLIC_KEY") && readme.includes("acción explícita"), "README documents public-key-only explicit push activation"],
 ];
 
 const failures = assertions.filter(([passed]) => !passed).map(([, message]) => message);
