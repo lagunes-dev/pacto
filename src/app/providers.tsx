@@ -13,6 +13,7 @@ import type { RealtimePort } from "../features/realtime/port";
 import type { PushSubscriptionPort } from "../features/push/port";
 import { RealtimeCoordinator } from "../features/realtime/RealtimeCoordinator";
 import { createAppServices, type AppServices } from "../infrastructure";
+import { ToastProvider } from "../shared/ui/ToastProvider";
 
 type ProviderOverrides = {
   authPort?: AuthPort;
@@ -45,7 +46,7 @@ export function AppProviders({ children, authPort, habitRepository, progressRepo
     <QueryClientProvider client={queryClient}>
       <AuthProvider authPort={authPort ?? services.auth} offlineQueue={offlineQueue ?? services.offlineQueue}>
         <RepositoryContext.Provider value={repositories}>
-          <RealtimeCoordinator>{children}</RealtimeCoordinator>
+          <RealtimeCoordinator><ToastProvider>{children}</ToastProvider></RealtimeCoordinator>
         </RepositoryContext.Provider>
       </AuthProvider>
     </QueryClientProvider>

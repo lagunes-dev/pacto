@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter } from "react-router";
 import { RouterProvider } from "react-router/dom";
@@ -6,10 +6,12 @@ import { RouterProvider } from "react-router/dom";
 import { AppProviders } from "../../app/providers";
 import { appRoutes } from "../../app/router";
 import { createFixtureServices } from "../../infrastructure/fixture/services";
+import type { PushStatus, PushSubscriptionPort } from "../../features/push/port";
+import { ToastProvider, useToast } from "./ToastProvider";
 
-function renderRoute(path: string, services = createFixtureServices()) {
+function renderRoute(path: string, services = createFixtureServices(), push?: PushSubscriptionPort) {
   const router = createMemoryRouter(appRoutes, { initialEntries: [path] });
-  render(<AppProviders authPort={services.auth}><RouterProvider router={router} /></AppProviders>);
+  render(<AppProviders authPort={services.auth} push={push}><RouterProvider router={router} /></AppProviders>);
   return { router, services };
 }
 
@@ -78,5 +80,68 @@ describe("canonical parity shell", () => {
     expect(screen.getByRole("heading", { name: "Aún no configurada" })).toBeInTheDocument();
     expect(screen.getByText(/No se envió ninguna solicitud\./)).toBeInTheDocument();
     expect(screen.queryByText(/PACTO-/)).not.toBeInTheDocument();
+  });
+
+  it("replaces and automatically dismisses the polite status toast", async () => {
+    vi.useFakeTimers();
+    function ToastActions() {
+      const { show } = useToast();
+      return <>
+        <button onClick={() => show({ title: "Primero", message: "Mensaje anterior" })}>Primero</button>
+        <button onClick={() => show({ title: "Actual", message: "Mensaje vigente" })}>Actual</button>
+      </>;
+    }
+    render(<ToastProvider><ToastActions /></ToastProvider>);
+
+    fireEvent.click(screen.getByRole("button", { name: "Primero" }));
+    expect(screen.getByRole("status")).toHaveTextContent("PrimeroMensaje anterior");
+    fireEvent.click(screen.getByRole("button", { name: "Actual" }));
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(screen.getByRole("status")).toHaveTextContent("ActualMensaje vigente");
+
+    act(() => vi.advanceTimersByTime(5_000));
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it("traps dialog focus and closes by Escape, backdrop, and explicit action with focus restoration", async () => {
+    const user = userEvent.setup();
+    const services = await authenticatedServices();
+    renderRoute("/inicio", services);
+    const trigger = await screen.findByRole("button", { name: "Abrir configuración inicial" });
+
+    await user.click(trigger);
+    let dialog = screen.getByRole("dialog", { name: "Configura tu Pacto" });
+    const closeIcon = within(dialog).getByRole("button", { name: "Cerrar configuración" });
+    const closeAction = within(dialog).getByRole("button", { name: "Cerrar" });
+    expect(closeIcon).toHaveFocus();
+    closeAction.focus();
+    await user.tab();
+    expect(closeIcon).toHaveFocus();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+
+    await user.click(trigger);
+    dialog = screen.getByRole("dialog", { name: "Configura tu Pacto" });
+    fireEvent.mouseDown(dialog);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it("reads notification status without requesting permission or claiming success", async () => {
+    const user = userEvent.setup();
+    const services = await authenticatedServices();
+    const push: PushSubscriptionPort = {
+      status: vi.fn(async (): Promise<PushStatus> => "default"),
+      activate: vi.fn(async (): Promise<PushStatus> => "enabled"),
+      revoke: vi.fn(async (): Promise<PushStatus> => "default"),
+    };
+    renderRoute("/inicio", services, push);
+
+    await user.click(await screen.findByRole("button", { name: "Consultar notificaciones" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Las notificaciones están desactivadas");
+    expect(push.status).toHaveBeenCalledOnce();
+    expect(push.activate).not.toHaveBeenCalled();
   });
 });
