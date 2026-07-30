@@ -61,6 +61,17 @@ describe("partnership routes", () => {
     expect(await screen.findByText("El apoyo está habilitado solamente mediante acciones explícitas.")).toBeInTheDocument();
   });
 
+  it("keeps invite decisions in an accessible responsive action group", async () => {
+    const { second } = await twoUsers();
+    renderRoute(second, "/partnership");
+
+    const accept = await screen.findByRole("button", { name: "Aceptar invitación" });
+    const reject = screen.getByRole("button", { name: "Rechazar invitación" });
+    expect(accept).toHaveClass("primary-button");
+    expect(reject).toHaveClass("danger-button");
+    expect(accept.closest(".invite-actions")).toBe(reject.closest(".invite-actions"));
+  });
+
   it("shows one neutral error for invalid or expired-style invite failures and moves focus", async () => {
     const user = userEvent.setup();
     const { second } = await twoUsers();

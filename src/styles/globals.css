@@ -455,6 +455,7 @@ h1 {
 
 .form-actions,
 .habit-actions,
+.invite-actions,
 .route-heading {
   display: flex;
   align-items: center;
@@ -482,6 +483,30 @@ h1 {
   text-underline-offset: 0.25em;
 }
 
+.secondary-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border: 1px solid rgba(183, 223, 191, 0.25);
+  border-radius: 11px;
+  background: rgba(183, 223, 191, 0.07);
+  color: var(--color-sage);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  text-align: center;
+}
+
+.primary-button,
+.secondary-button,
+.danger-button,
+.text-button { cursor: pointer; }
+
+.primary-button:hover,
+.secondary-button:hover { filter: brightness(1.08); }
+
 .service-alert {
   display: grid;
   gap: 0.35rem;
@@ -504,13 +529,21 @@ h1 {
   margin-bottom: 0.8rem;
 }
 
+.section-heading {
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  letter-spacing: -0.03em;
+}
+
 .habit-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 1rem 0;
+  margin-bottom: 0.75rem;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .habit-item h3,
@@ -523,12 +556,18 @@ h1 {
   color: var(--color-text-muted);
 }
 
+.habit-summary { min-width: 0; }
+
 .danger-button {
+  display: inline-flex;
   min-height: 44px;
   min-width: 44px;
-  padding: 8px 10px;
-  border: 0;
-  background: transparent;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 180, 180, 0.35);
+  border-radius: 11px;
+  background: rgba(127, 45, 45, 0.16);
   color: #ffb4b4;
   cursor: pointer;
   font: inherit;
@@ -544,6 +583,7 @@ h1 {
   display: grid;
   gap: 0.5rem;
   width: 100%;
+  grid-column: 1 / -1;
   padding: 0.75rem;
   border: 1px solid rgba(255, 180, 180, 0.35);
   border-radius: 0.8rem;
@@ -618,6 +658,7 @@ h1 {
 .consent-route h2 { margin: 0; font-size: 1.25rem; }
 .consent-route p { line-height: 1.55; }
 .consent-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.invite-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .consent-panel,
 .consent-form {
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -663,6 +704,8 @@ h1 {
     align-items: flex-start;
     flex-direction: column;
   }
+
+  .habit-item { grid-template-columns: 1fr; }
 
   .progress-grid {
     grid-template-columns: 1fr;
@@ -801,7 +844,11 @@ h1 {
   }
   .form-actions,
   .habit-actions { align-items: stretch; }
+  .invite-actions { grid-template-columns: 1fr; }
+  .habit-actions { width: 100%; }
+  .habit-actions > * { flex: 1 1 0; }
   .form-actions .primary-button,
+  .form-actions .secondary-button,
   .form-actions .text-link { max-width: 100%; overflow-wrap: anywhere; }
 }
 

@@ -84,6 +84,20 @@ describe("private habit and progress flow", () => {
     expect(await screen.findByText(/Todavía no has creado hábitos/)).toBeInTheDocument();
   });
 
+  it("exposes intentional actions and contained habit cards", async () => {
+    const { services } = await ownerServices();
+    await services.habits.create({ name: "Leer", priority: 2 });
+    renderHabitForm(services);
+
+    expect(await screen.findByRole("heading", { name: "Tus hábitos" })).toHaveClass("section-heading");
+    expect(screen.getByRole("link", { name: "Ver progreso" })).toHaveClass("secondary-button");
+    const habitHeading = await screen.findByRole("heading", { name: "Leer" });
+    const card = habitHeading.closest("article");
+    expect(card).toHaveClass("habit-item");
+    expect(screen.getByRole("button", { name: "Editar Leer" })).toHaveClass("secondary-button");
+    expect(screen.getByRole("button", { name: "Eliminar Leer" })).toHaveClass("danger-button");
+  });
+
   it("shows an honest unavailable error and preserves entered values", async () => {
     const user = userEvent.setup();
     const { services } = await ownerServices();

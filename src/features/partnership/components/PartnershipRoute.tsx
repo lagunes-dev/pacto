@@ -86,5 +86,5 @@ export function PartnershipRoute() {
 const statusLabel = { active: "Activo", paused: "Pausado", ended: "Finalizado" } as const;
 
 function RedeemForm({ code, setCode, busy, onAccept, onReject }: { code: string; setCode(value: string): void; busy: boolean; onAccept(): void; onReject(): void }) {
-  return <form className="consent-form" onSubmit={(event) => { event.preventDefault(); onAccept(); }}><label htmlFor="invite-code">Código de invitación</label><input id="invite-code" required value={code} onChange={(event) => setCode(event.target.value)} /><div className="form-actions"><button className="primary-button" disabled={busy} type="submit">Aceptar invitación</button><button className="danger-button" disabled={busy || !code} type="button" onClick={onReject}>Rechazar invitación</button></div></form>;
+  return <form className="consent-form" onSubmit={(event) => { event.preventDefault(); onAccept(); }}><label htmlFor="invite-code">Código de invitación</label><input id="invite-code" required value={code} onChange={(event) => setCode(event.target.value)} /><div className="invite-actions"><button className="primary-button" disabled={busy} type="submit">Aceptar invitación</button><button className="danger-button" disabled={busy || !code} type="button" onClick={onReject}>Rechazar invitación</button></div></form>;
 }

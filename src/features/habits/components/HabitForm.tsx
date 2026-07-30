@@ -96,27 +96,27 @@ export function HabitForm() {
         </select>
 
         {actionError && <div className="service-alert" role="alert"><strong>El servicio no completó la acción.</strong><span>{message(actionError)} No se guardaron cambios; tus datos siguen en el formulario.</span></div>}
-        <div className="form-actions">
+        <div className="form-actions habit-form-actions">
           <button className="primary-button" type="submit" disabled={pending}>{pending ? "Guardando…" : editing ? "Guardar cambios" : "Crear hábito"}</button>
-          {editing && <button className="text-button" type="button" onClick={cancelEdit}>Cancelar edición</button>}
-          <Link className="text-link" to="/progress">Ver progreso</Link>
+          {editing && <button className="secondary-button" type="button" onClick={cancelEdit}>Cancelar edición</button>}
+          <Link className="secondary-button" to="/progress">Ver progreso</Link>
         </div>
       </form>
 
       <p className="sr-announcement" role="status" aria-live="polite">{announcement}</p>
       <section className="habit-list" aria-labelledby="habit-list-title">
-        <h2 id="habit-list-title">Tus hábitos</h2>
+        <h2 className="section-heading" id="habit-list-title">Tus hábitos</h2>
         {habitsQuery.isPending && <p role="status">Cargando tus hábitos…</p>}
         {habitsQuery.isError && <div className="service-alert" role="alert"><strong>No pudimos cargar tus hábitos.</strong><span>{message(habitsQuery.error)}</span><button type="button" className="text-button" onClick={() => habitsQuery.refetch()}>Reintentar</button></div>}
         {habitsQuery.isSuccess && habitsQuery.data.length === 0 && <p className="empty-copy">Todavía no has creado hábitos. Tu primer hábito aparecerá aquí.</p>}
         {habitsQuery.data?.map((habit) => (
           <article className="habit-item" key={habit.id}>
-            <div><h3>{habit.name}</h3><p>Prioridad {habit.priority}</p></div>
+            <div className="habit-summary"><h3>{habit.name}</h3><p>Prioridad {habit.priority} · Estado activo</p></div>
             <div className="habit-actions">
-              <button type="button" className="text-button" onClick={() => beginEdit(habit)}>Editar <span className="visually-hidden">{habit.name}</span></button>
+              <button type="button" className="secondary-button" onClick={() => beginEdit(habit)}>Editar <span className="visually-hidden">{habit.name}</span></button>
               <button type="button" className="danger-button" disabled={deleteHabit.isPending} onClick={() => setPendingRemoval(habit)}>Eliminar <span className="visually-hidden">{habit.name}</span></button>
             </div>
-            {pendingRemoval?.id === habit.id && <div className="delete-confirmation" role="alertdialog" aria-label={`Confirmar eliminación de ${habit.name}`}><span>¿Eliminar {habit.name}? Esta acción no se puede deshacer.</span><div className="habit-actions"><button type="button" className="text-button" onClick={() => setPendingRemoval(null)}>Cancelar</button><button type="button" className="danger-button" disabled={deleteHabit.isPending} onClick={() => remove(habit)}>Confirmar eliminación</button></div></div>}
+            {pendingRemoval?.id === habit.id && <div className="delete-confirmation" role="alertdialog" aria-label={`Confirmar eliminación de ${habit.name}`}><span>¿Eliminar {habit.name}? Esta acción no se puede deshacer.</span><div className="habit-actions"><button type="button" className="secondary-button" onClick={() => setPendingRemoval(null)}>Cancelar</button><button type="button" className="danger-button" disabled={deleteHabit.isPending} onClick={() => remove(habit)}>Confirmar eliminación</button></div></div>}
           </article>
         ))}
       </section>
