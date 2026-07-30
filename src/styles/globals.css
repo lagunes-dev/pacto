@@ -86,6 +86,30 @@ button {
   padding-left: env(safe-area-inset-left, 0px);
 }
 
+.auth-layout {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 28px 20px;
+}
+
+.auth-brand {
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.auth-content {
+  display: grid;
+  max-width: 520px;
+  min-height: calc(100vh - 120px);
+  min-height: calc(100dvh - 120px);
+  margin: 0 auto;
+  align-content: center;
+}
+
+.auth-card {
+  width: 100%;
+}
+
 .sidebar {
   position: fixed;
   top: calc(18px + env(safe-area-inset-top, 0px));

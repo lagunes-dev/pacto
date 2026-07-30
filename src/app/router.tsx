@@ -7,6 +7,7 @@ import {
 
 import {
   App,
+  AuthLayout,
   NewHabitRoute,
   ProgressRoute,
 } from "./App";
@@ -33,12 +34,17 @@ function UnavailableRoute() {
 
 export const appRoutes: RouteObject[] = [
   {
-    path: "/",
-    element: <App />,
+    element: <AuthLayout />,
     children: [
       { index: true, element: <Navigate to="/sign-in" replace /> },
       { path: "sign-in", element: <AuthRoute mode="login" /> },
       { path: "register", element: <AuthRoute mode="register" /> },
+    ],
+  },
+  {
+    path: "/",
+    element: <App />,
+    children: [
       { path: "offline", element: <OfflineRoute /> },
       {
         loader: offlinePrivateLoader,

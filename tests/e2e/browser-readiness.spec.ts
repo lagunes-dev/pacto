@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 async function register(page: Page, email: string) {
   await page.goto("/register");
-  await page.getByLabel("Correo").fill(email);
+  await page.getByLabel("Correo electrónico").fill(email);
   await page.getByLabel("Contraseña").fill("private-pass");
   await page.getByRole("button", { name: "Registrarme" }).click();
   await expect(page.getByRole("heading", { name: "Tu progreso personal" })).toBeVisible();
@@ -14,13 +14,15 @@ async function expectNoHorizontalOverflow(page: Page) {
   )).toBe(true);
 }
 
-test("redirects an unauthenticated private deep link through the built shell", async ({ page }) => {
+test("redirects an unauthenticated private deep link to the public auth layout", async ({ page }) => {
   const response = await page.goto("/partnership/preferences");
 
   expect(response?.ok()).toBe(true);
   await expect(page).toHaveURL(/\/sign-in$/);
-  await expect(page.getByRole("heading", { name: "Volvé a tus decisiones." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Vuelve a tus decisiones." })).toBeVisible();
   await expect(page.getByRole("button", { name: "Iniciar sesión" })).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "Barra lateral" })).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "Navegación móvil" })).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
 });
 

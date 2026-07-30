@@ -8,6 +8,6 @@ export type RegistrationResult =
   | { status: "confirmation-required"; email: string };
 
 export const authCredentialsSchema = z.object({
-  email: z.email("Ingresá un correo válido."),
+  email: z.email("Ingresa un correo válido."),
   password: z.string().min(8, "Usá al menos 8 caracteres.").max(128),
 });

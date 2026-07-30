@@ -43,7 +43,7 @@ describe("private route integration", () => {
 
     await waitFor(() => expect(router.state.location.pathname).toBe("/sign-in"));
     expect(
-      await screen.findByRole("heading", { name: "Volvé a tus decisiones." }),
+      await screen.findByRole("heading", { name: "Vuelve a tus decisiones." }),
     ).toBeInTheDocument();
   });
 

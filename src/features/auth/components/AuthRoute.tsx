@@ -44,14 +44,14 @@ export function AuthRoute({ mode }: { mode: "login" | "register" }) {
   }
 
   return (
-    <section className="route-card" aria-labelledby="auth-title">
+    <section className="route-card auth-card" aria-labelledby="auth-title">
       <p className="eyebrow">Espacio personal</p>
-      <h1 id="auth-title">{isRegister ? "Creá tu cuenta privada." : "Volvé a tus decisiones."}</h1>
+      <h1 id="auth-title">{isRegister ? "Crea tu cuenta privada." : "Vuelve a tus decisiones."}</h1>
       <p className="route-lead">Tus hábitos y tu progreso pertenecen únicamente a tu sesión.</p>
       <div className="notice" role="status">La persistencia depende del adaptador configurado. El fixture funciona únicamente en desarrollo.</div>
-      {confirmationEmail && <div className="notice" role="status">Revisá {confirmationEmail} para confirmar tu cuenta antes de iniciar sesión.</div>}
+      {confirmationEmail && <div className="notice" role="status">Revisa {confirmationEmail} para confirmar tu cuenta antes de iniciar sesión.</div>}
       <form className="auth-form" onSubmit={submit} noValidate>
-        <label htmlFor="email">Correo</label>
+        <label htmlFor="email">Correo electrónico</label>
         <input id="email" name="email" type="email" autoComplete="email" value={values.email} aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "email-error" : undefined} onChange={(e) => setValues({ ...values, email: e.target.value })} />
         {errors.email && <span id="email-error" className="field-error">{errors.email}</span>}
         <label htmlFor="password">Contraseña</label>
@@ -60,7 +60,7 @@ export function AuthRoute({ mode }: { mode: "login" | "register" }) {
         {errors.form && <p className="field-error" role="alert">{errors.form}</p>}
         <button className="primary-button" type="submit">{isRegister ? "Registrarme" : "Iniciar sesión"}</button>
       </form>
-      <button className="text-button" type="button" onClick={() => navigate(isRegister ? "/sign-in" : "/register")}>{isRegister ? "Ya tengo cuenta" : "Crear una cuenta"}</button>
+      <button className="text-button" type="button" onClick={() => navigate(isRegister ? "/sign-in" : "/register")}>{isRegister ? "Ya tengo una cuenta" : "Crear una cuenta"}</button>
     </section>
   );
 }
