@@ -19,6 +19,8 @@ import type { PushSubscriptionPort } from "../features/push/port";
 import { createUnavailablePushPort } from "../features/push/port";
 import { createSupabasePushPort } from "./supabase/push";
 import { asCheckinClient, createSupabaseDailyCheckinRepository } from "./supabase/repositories/checkin";
+import type { RecoveryRepository } from "../features/recovery/repository";
+import { asRecoveryClient, createSupabaseRecoveryRepository } from "./supabase/repositories/recovery";
 
 export type AppServices = {
   auth: AuthPort;
@@ -28,6 +30,7 @@ export type AppServices = {
   preferences: PreferenceRepository;
   support: SupportRepository;
   checkin: DailyCheckinRepository;
+  recovery: RecoveryRepository;
   offlineQueue: OfflineQueuePort;
   realtime: RealtimePort;
   push: PushSubscriptionPort;
@@ -67,6 +70,7 @@ export function createAppServices(environment = readEnvironment()): AppServices 
       ...privateRepositories,
       ...lifecycleRepositories,
       checkin: createSupabaseDailyCheckinRepository(asCheckinClient(client)),
+      recovery: createSupabaseRecoveryRepository(asRecoveryClient(client)),
       offlineQueue,
       realtime: createSupabaseRealtimePort(client),
       push: createSupabasePushPort(client, environment.vapidPublicKey ?? ""),
@@ -100,7 +104,8 @@ export function createAppServices(environment = readEnvironment()): AppServices 
   const preferences: PreferenceRepository = { getMine: unavailable, updateMine: unavailable };
   const support: SupportRepository = { list: unavailable, create: unavailable, acknowledge: unavailable, close: unavailable };
   const checkin: DailyCheckinRepository = { loadToday: unavailable, save: unavailable };
-  return { auth, habits, progress, partnership, preferences, support, checkin, offlineQueue, realtime: createUnavailableRealtimePort(), push: createUnavailablePushPort() };
+  const recovery: RecoveryRepository = { timeline: unavailable, save: unavailable };
+  return { auth, habits, progress, partnership, preferences, support, checkin, recovery, offlineQueue, realtime: createUnavailableRealtimePort(), push: createUnavailablePushPort() };
 }
 
 export function createAuthPort(): AuthPort { return createAppServices().auth; }

@@ -1,5 +1,7 @@
-import { mutationOptions, queryOptions } from "@tanstack/react-query";
+import { mutationOptions, queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { useRepositories } from "../../app/providers";
+import { useAuth } from "../auth/queries/AuthProvider";
 import { saveRecoveryInputSchema } from "./model";
 import type { RecoveryRepository, RegistroRecordRepository } from "./repository";
 
@@ -24,4 +26,22 @@ export function weeklyReviewOptions(repository: RegistroRecordRepository, ownerI
 
 export function saveRecoveryOptions(repository: RecoveryRepository) {
   return mutationOptions({ mutationFn: (input: unknown) => repository.save(saveRecoveryInputSchema.parse(input)) });
+}
+
+export function useRecoveryTimeline() {
+  const { recovery } = useRepositories();
+  const { session } = useAuth();
+  const ownerId = session?.user.id ?? "anonymous";
+  return useQuery({ ...recoveryTimelineOptions(recovery, ownerId), enabled: Boolean(session) });
+}
+
+export function useSaveRecovery() {
+  const { recovery } = useRepositories();
+  const { session } = useAuth();
+  const queryClient = useQueryClient();
+  const ownerId = session?.user.id ?? "anonymous";
+  return useMutation({
+    ...saveRecoveryOptions(recovery),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: recoveryKeys.owner(ownerId) }),
+  });
 }

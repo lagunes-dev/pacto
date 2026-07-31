@@ -10,13 +10,15 @@ import { saveDailyCheckinInputSchema, type SavedCheckin } from "../../features/c
 import type { DailyCheckinRepository } from "../../features/checkin/repository";
 import { localDayAt, resolveTimezone } from "../../features/checkin/timezone";
 import { createPartnershipFixture } from "./partnership";
+import { saveRecoveryInputSchema, type RecoveryRecord } from "../../features/recovery/model";
+import type { RecoveryRepository } from "../../features/recovery/repository";
 
 type Account = { id: string; email: string; password: string; displayName: string };
 type PartnershipFixture = ReturnType<typeof createPartnershipFixture>;
-export type FixtureStore = { accounts: Account[]; habits: Habit[]; checkins: Map<string, SavedCheckin>; partnershipFixture?: PartnershipFixture };
+export type FixtureStore = { accounts: Account[]; habits: Habit[]; checkins: Map<string, SavedCheckin>; recoveries: Map<string, RecoveryRecord[]>; partnershipFixture?: PartnershipFixture };
 
 export function createFixtureStore(): FixtureStore {
-  return { accounts: [], habits: [], checkins: new Map() };
+  return { accounts: [], habits: [], checkins: new Map(), recoveries: new Map() };
 }
 
 export function createFixtureServices(store = createFixtureStore(), now: () => Date = () => new Date()) {
@@ -116,6 +118,30 @@ export function createFixtureServices(store = createFixtureStore(), now: () => D
     },
   };
 
+  const recovery: RecoveryRepository = {
+    async timeline() { return structuredClone(store.recoveries.get(requireOwner()) ?? []); },
+    async save(input) {
+      const ownerId = requireOwner();
+      const safe = saveRecoveryInputSchema.parse(input);
+      const records = store.recoveries.get(ownerId) ?? [];
+      const prior = records.find((record) => record.id === safe.operationId);
+      if (prior) return structuredClone(prior);
+      if (safe.expectedRevision !== (records[0]?.revision ?? 0)) throw new Error("Recovery revision conflict.");
+      const record: RecoveryRecord = {
+        id: safe.operationId,
+        revision: safe.expectedRevision + 1,
+        trigger: safe.trigger,
+        moment: safe.moment,
+        need: safe.need,
+        alternative: safe.alternative,
+        privateNote: safe.privateNote?.trim() || null,
+        recordedAt: now().toISOString(),
+      };
+      store.recoveries.set(ownerId, [record, ...records]);
+      return structuredClone(record);
+    },
+  };
+
   const consentServices = () => {
     const ownerId = requireOwner();
     if (store.accounts.length < 2) throw new Error("Partnership fixture unavailable.");
@@ -142,5 +168,5 @@ export function createFixtureServices(store = createFixtureStore(), now: () => D
     async close(id) { return consentServices().support.close(id); },
   };
 
-  return { auth, habits, progress, partnership, preferences, support, checkin };
+  return { auth, habits, progress, partnership, preferences, support, checkin, recovery };
 }

@@ -11,7 +11,7 @@ import { ToastProvider, useToast } from "./ToastProvider";
 
 function renderRoute(path: string, services = createFixtureServices(), push?: PushSubscriptionPort) {
   const router = createMemoryRouter(appRoutes, { initialEntries: [path] });
-  render(<AppProviders authPort={services.auth} push={push}><RouterProvider router={router} /></AppProviders>);
+  render(<AppProviders authPort={services.auth} recoveryRepository={services.recovery} push={push}><RouterProvider router={router} /></AppProviders>);
   return { router, services };
 }
 
@@ -74,7 +74,7 @@ describe("canonical parity shell", () => {
     renderRoute("/inicio", services);
 
     expect(await screen.findByRole("heading", { name: "La próxima decisión sí cuenta." })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Sin un plan guardado" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Sin un plan guardado" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Elige qué necesitas" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Sin estado de pareja mostrado" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Aún no configurada" })).toBeInTheDocument();

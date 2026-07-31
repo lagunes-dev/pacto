@@ -33,6 +33,7 @@ function renderHome(services: Services, checkinRepository: DailyCheckinRepositor
       habitRepository={services.habits}
       progressRepository={services.progress}
       checkinRepository={checkinRepository}
+      recoveryRepository={services.recovery}
     >
       <RouterProvider router={router} />
     </AppProviders>,

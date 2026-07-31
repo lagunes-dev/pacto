@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { SessionActions } from "../../auth/components/AuthRoute";
 import { DailyCheckinCard } from "../../checkin/components/DailyCheckinCard";
 import { usePersonalProgress } from "../../progress/queries";
+import { useRecoveryTimeline } from "../../recovery/queries";
 
 function message(error: unknown) {
   return error instanceof Error ? error.message : "No pudimos consultar el servicio.";
@@ -10,6 +11,8 @@ function message(error: unknown) {
 
 export function HomeRoute() {
   const progress = usePersonalProgress();
+  const plans = useRecoveryTimeline();
+  const currentPlan = plans.data?.[0];
 
   return (
     <section className="home-route" aria-labelledby="home-title">
@@ -32,8 +35,10 @@ export function HomeRoute() {
         <div className="home-stack">
           <article className="home-panel home-plan">
             <p className="eyebrow">Plan para hoy</p>
-            <h2>Sin un plan guardado</h2>
-            <p>Los planes de recuperación se habilitarán en una entrega posterior. Este espacio no guarda respuestas todavía.</p>
+            {plans.isPending && <p role="status">Cargando tu plan…</p>}
+            {plans.isError && <div className="service-alert" role="alert"><strong>Tu plan no está disponible.</strong><span>{message(plans.error)} No mostramos datos sin confirmar.</span><button type="button" className="text-button" onClick={() => plans.refetch()}>Reintentar</button></div>}
+            {plans.isSuccess && !currentPlan && <><h2>Sin un plan guardado</h2><p>Registra una situación para preparar una alternativa concreta.</p><Link className="text-link" to="/registro">Crear un plan</Link></>}
+            {plans.isSuccess && currentPlan && <><h2>{currentPlan.moment}</h2><p>Si vuelve el {currentPlan.trigger.toLowerCase()}, entonces {currentPlan.alternative}.</p><Link className="text-link" to="/registro">Ver registro</Link></>}
           </article>
 
           <DailyCheckinCard />

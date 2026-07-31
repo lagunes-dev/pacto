@@ -12,6 +12,7 @@ import type { OfflineQueuePort } from "../features/offline-queue/port";
 import type { RealtimePort } from "../features/realtime/port";
 import type { PushSubscriptionPort } from "../features/push/port";
 import type { DailyCheckinRepository } from "../features/checkin/repository";
+import type { RecoveryRepository } from "../features/recovery/repository";
 import { RealtimeCoordinator } from "../features/realtime/RealtimeCoordinator";
 import { createAppServices, type AppServices } from "../infrastructure";
 import { ToastProvider } from "../shared/ui/ToastProvider";
@@ -27,11 +28,12 @@ type ProviderOverrides = {
   realtime?: RealtimePort;
   push?: PushSubscriptionPort;
   checkinRepository?: DailyCheckinRepository;
+  recoveryRepository?: RecoveryRepository;
 };
 
 const RepositoryContext = createContext<Omit<AppServices, "auth" | "offlineQueue"> | null>(null);
 
-export function AppProviders({ children, authPort, habitRepository, progressRepository, partnershipRepository, preferenceRepository, supportRepository, offlineQueue, realtime, push, checkinRepository }: PropsWithChildren<ProviderOverrides>) {
+export function AppProviders({ children, authPort, habitRepository, progressRepository, partnershipRepository, preferenceRepository, supportRepository, offlineQueue, realtime, push, checkinRepository, recoveryRepository }: PropsWithChildren<ProviderOverrides>) {
   const [services] = useState(() => createAppServices());
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
   const repositories = {
@@ -43,6 +45,7 @@ export function AppProviders({ children, authPort, habitRepository, progressRepo
     realtime: realtime ?? services.realtime,
     push: push ?? services.push,
     checkin: checkinRepository ?? services.checkin,
+    recovery: recoveryRepository ?? services.recovery,
   };
 
   return (
