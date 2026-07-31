@@ -8,10 +8,12 @@ import {
   useEndPartnership,
   useMyPartnership,
   usePausePartnership,
+  useRequestPartnershipResume,
+  useConfirmPartnershipResume,
   useRejectInvite,
 } from "../queries";
 
-const neutralError = "La solicitud no está disponible. Revisá los datos o intentá nuevamente.";
+const neutralError = "La solicitud no está disponible. Revisa los datos o intenta nuevamente.";
 
 export function PartnershipRoute() {
   const partnership = useMyPartnership();
@@ -20,13 +22,15 @@ export function PartnershipRoute() {
   const rejectInvite = useRejectInvite();
   const cancelInvite = useCancelInvite();
   const pause = usePausePartnership();
+  const requestResume = useRequestPartnershipResume();
+  const confirmResume = useConfirmPartnershipResume();
   const end = useEndPartnership();
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [createdCode, setCreatedCode] = useState("");
   const [announcement, setAnnouncement] = useState("");
   const errorRef = useRef<HTMLDivElement>(null);
-  const mutations = [createInvite, acceptInvite, rejectInvite, cancelInvite, pause, end];
+  const mutations = [createInvite, acceptInvite, rejectInvite, cancelInvite, pause, requestResume, confirmResume, end];
   const error = partnership.error ?? mutations.find((item) => item.isError)?.error;
 
   useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
@@ -42,7 +46,7 @@ export function PartnershipRoute() {
       <div><p className="eyebrow">Consentimiento explícito</p><h1 id="partnership-title">Vínculo de apoyo</h1></div>
       <p className="route-lead">Cada persona decide si acepta, pausa o finaliza el vínculo. Nada se comparte automáticamente.</p>
       <p className="sr-announcement" role="status" aria-live="polite">{announcement}</p>
-      {createdCode && <div className="notice"><strong>Código de invitación: {createdCode}</strong><br />Compartilo directamente con la persona invitada antes de su vencimiento.</div>}
+       {createdCode && <div className="notice"><strong>Código de invitación: {createdCode}</strong><br />Compártelo directamente con la persona invitada antes de su vencimiento.</div>}
       {error && <div ref={errorRef} tabIndex={-1} className="service-alert" role="alert">{neutralError}</div>}
 
       {!current && (
@@ -73,7 +77,11 @@ export function PartnershipRoute() {
           <span className="status-chip">{statusLabel[current.status]}</span>
           <h2>{current.partner.displayName}</h2>
           {current.status === "active" && <><p>El apoyo está habilitado solamente mediante acciones explícitas.</p><div className="form-actions"><Link className="primary-button" to="/partnership/support">Solicitudes de apoyo</Link><Link className="text-link" to="/partnership/preferences">Mis preferencias</Link></div></>}
-          {current.status === "paused" && <><p>El acceso de apoyo está revocado. Tus preferencias siguen siendo tuyas.</p><Link className="text-link" to="/partnership/preferences">Mis preferencias</Link></>}
+           {current.status === "paused" && <><p>El acceso de apoyo está revocado. Tus preferencias y tu historial privado siguen siendo tuyos.</p><Link className="text-link" to="/partnership/preferences">Mis preferencias</Link>
+             {(!current.resumeStatus || current.resumeStatus === "none") && <button className="primary-button" disabled={busy} type="button" onClick={() => requestResume.mutate(undefined, { onSuccess: () => announce("Solicitud de reactivación enviada. El vínculo sigue pausado hasta la otra confirmación.") })}>Solicitar reactivación</button>}
+             {current.resumeStatus === "requested-by-me" && <p className="notice">Tu confirmación está registrada. El vínculo sigue pausado hasta que la otra persona confirme.</p>}
+             {current.resumeStatus === "awaiting-my-confirmation" && <button className="primary-button" disabled={busy} type="button" onClick={() => window.confirm("¿Reactivar el vínculo y volver a habilitar solamente los permisos actuales?") && confirmResume.mutate(undefined, { onSuccess: () => announce("Vínculo reactivado con ambas confirmaciones.") })}>Confirmar reactivación</button>}
+           </>}
           {current.status === "ended" && <p>Este vínculo terminó y no puede reactivarse desde esta versión.</p>}
           {current.status === "active" && <button className="danger-button" disabled={busy} type="button" onClick={() => window.confirm("¿Pausar el vínculo y revocar el acceso de apoyo ahora?") && pause.mutate(undefined, { onSuccess: () => announce("Vínculo pausado. El acceso de apoyo fue revocado.") })}>Pausar vínculo</button>}
           {current.status !== "ended" && <button className="danger-button" disabled={busy} type="button" onClick={() => window.confirm("¿Finalizar el vínculo de forma irreversible?") && end.mutate(undefined, { onSuccess: () => announce("Vínculo finalizado. El acceso fue revocado.") })}>Finalizar vínculo</button>}

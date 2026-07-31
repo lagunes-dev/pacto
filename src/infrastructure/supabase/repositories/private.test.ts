@@ -29,6 +29,10 @@ function createClient(results: Record<string, Result[]>, actorId = "actor-1") {
   const client = {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: actorId ? { id: actorId } : null }, error: null }) },
     from: vi.fn((table: string) => new Builder(table)),
+    rpc: vi.fn((name: string, value?: Record<string, unknown>) => {
+      operations.push({ table: `rpc:${name}`, action: "rpc", value });
+      return Promise.resolve(take(`rpc:${name}`));
+    }),
   } as unknown as PrivateDataClient;
   return { client, operations };
 }
@@ -111,25 +115,20 @@ describe("Supabase private repositories", () => {
   });
 
   it("maps and updates owner preferences without owner input", async () => {
-    const initial = { share_percentages: false, share_general_status: true, updated_at: "2026-07-29T10:00:00Z" };
-    const updated = { share_percentages: true, share_general_status: false, updated_at: "2026-07-29T11:00:00Z" };
-    const { client, operations } = createClient({ sharing_preferences: [
-      { data: initial, error: null },
-      { data: updated, error: null },
-    ] });
+    const sharing = { share_checkin_completed: true, share_general_status: true, share_habit_details: false, share_craving_level: false, share_percentages: false, updated_at: "2026-07-29T10:00:00Z" };
+    const communication = { no_threats: true, ask_before_advice: true, no_comparisons: true, pause_allowed: true, preferred_support: "Pregunta primero", updated_at: sharing.updated_at };
+    const updatedSharing = { ...sharing, share_percentages: true, share_general_status: false, updated_at: "2026-07-29T11:00:00Z" };
+    const updatedCommunication = { ...communication, ask_before_advice: false, updated_at: updatedSharing.updated_at };
+    const { client, operations } = createClient({
+      sharing_preferences: [{ data: sharing, error: null }, { data: updatedSharing, error: null }, { data: updatedSharing, error: null }],
+      communication_preferences: [{ data: communication, error: null }, { data: updatedCommunication, error: null }, { data: updatedCommunication, error: null }],
+      profiles: [{ data: { timezone: "America/Mexico_City" }, error: null }, { data: { timezone: "America/Mexico_City" }, error: null }],
+    });
     const { preferences } = createSupabasePrivateRepositories(client);
 
-    await expect(preferences.getMine()).resolves.toEqual({
-      shareProgress: false,
-      allowSupportRequests: true,
-      updatedAt: initial.updated_at,
-    });
-    await expect(preferences.updateMine({ shareProgress: true, allowSupportRequests: false })).resolves.toEqual({
-      shareProgress: true,
-      allowSupportRequests: false,
-      updatedAt: updated.updated_at,
-    });
-    expect(operations.find((operation) => operation.action === "update")?.value).toEqual({
+    await expect(preferences.getMine()).resolves.toMatchObject({ sharePercentages: false, shareGeneralStatus: true, preferredSupport: "Pregunta primero" });
+    await expect(preferences.updateMine({ sharePercentages: true, shareGeneralStatus: false, askBeforeAdvice: false })).resolves.toMatchObject({ sharePercentages: true, shareGeneralStatus: false, askBeforeAdvice: false });
+    expect(operations.find((operation) => operation.table === "sharing_preferences" && operation.action === "update")?.value).toEqual({
       share_percentages: true,
       share_general_status: false,
     });
@@ -141,6 +140,24 @@ describe("Supabase private repositories", () => {
     const { habits } = createSupabasePrivateRepositories(client);
 
     await expect(habits.listMine()).rejects.toThrow("row-level security violation");
+  });
+
+  it("completes onboarding through one actor-derived RPC", async () => {
+    const sharing = { share_checkin_completed: false, share_general_status: true, share_habit_details: false, share_craving_level: false, share_percentages: false, updated_at: "2026-07-31T10:00:00Z" };
+    const communication = { no_threats: true, ask_before_advice: true, no_comparisons: true, pause_allowed: true, preferred_support: "Escúchame", updated_at: sharing.updated_at };
+    const { client, operations } = createClient({
+      "rpc:complete_onboarding": [{ data: "goal-1", error: null }],
+      sharing_preferences: [{ data: sharing, error: null }], communication_preferences: [{ data: communication, error: null }],
+      profiles: [{ data: { timezone: "America/Mexico_City" }, error: null }],
+    });
+    const { preferences } = createSupabasePrivateRepositories(client);
+    await preferences.completeSetup({
+      goal: "Caminar", timezone: "America/Mexico_City", shareCheckinCompleted: false, shareGeneralStatus: true,
+      shareHabitDetails: false, shareCravingLevel: false, sharePercentages: false, noThreats: true,
+      askBeforeAdvice: true, noComparisons: true, pauseAllowed: true, preferredSupport: "Escúchame",
+    });
+    expect(operations.filter((operation) => operation.action === "rpc")).toHaveLength(1);
+    expect(operations.find((operation) => operation.action === "rpc")?.value).not.toHaveProperty("ownerId");
   });
 
   it("requires an authenticated actor before inserts", async () => {

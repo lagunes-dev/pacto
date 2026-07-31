@@ -99,9 +99,11 @@ export function createAppServices(environment = readEnvironment()): AppServices 
     rejectInvite: unavailable,
     cancelInvite: unavailable,
     pause: unavailable,
+    requestResume: unavailable,
+    confirmResume: unavailable,
     end: unavailable,
   };
-  const preferences: PreferenceRepository = { getMine: unavailable, updateMine: unavailable };
+  const preferences: PreferenceRepository = { getMine: unavailable, updateMine: unavailable, completeSetup: unavailable };
   const support: SupportRepository = { list: unavailable, create: unavailable, acknowledge: unavailable, close: unavailable };
   const checkin: DailyCheckinRepository = { loadToday: unavailable, save: unavailable };
   const recovery: RecoveryRepository = { timeline: unavailable, save: unavailable };

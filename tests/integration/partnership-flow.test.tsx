@@ -100,11 +100,46 @@ describe("partnership routes", () => {
     const user = userEvent.setup();
     const { first, second } = await activeUsers();
     renderRoute(first, "/partnership/preferences");
-    await user.click(await screen.findByLabelText(/Permitir una futura vista/));
+    await user.click(await screen.findByLabelText("Porcentajes personales"));
+    await user.click(screen.getByLabelText("Preguntar antes de dar consejos"));
+    await user.clear(screen.getByLabelText("Apoyo preferido"));
+    await user.type(screen.getByLabelText("Apoyo preferido"), "Escúchame primero");
     await user.click(screen.getByRole("button", { name: "Guardar mis preferencias" }));
     expect(await screen.findByRole("status")).toHaveTextContent("actualizadas");
-    expect((await first.preferences.getMine()).shareProgress).toBe(true);
-    expect((await second.preferences.getMine()).shareProgress).toBe(false);
+    expect(await first.preferences.getMine()).toMatchObject({ sharePercentages: true, askBeforeAdvice: false, preferredSupport: "Escúchame primero" });
+    expect(await second.preferences.getMine()).toMatchObject({ sharePercentages: false, askBeforeAdvice: true });
+  });
+
+  it("saves only explicit setup choices and never creates a partnership", async () => {
+    const user = userEvent.setup();
+    const { first } = await twoUsers();
+    renderRoute(first, "/inicio");
+    await user.click(await screen.findByRole("button", { name: "Abrir configuración inicial" }));
+    await user.clear(screen.getByLabelText("Objetivo personal"));
+    await user.type(screen.getByLabelText("Objetivo personal"), "Caminar después de comer");
+    await user.click(screen.getByLabelText("Estado general"));
+    await user.click(screen.getByLabelText("Preguntar antes de dar consejos"));
+    await user.click(screen.getByLabelText(/Confirmo que estas son mis decisiones/));
+    await user.click(screen.getByRole("button", { name: "Guardar mis decisiones" }));
+    expect(await screen.findByText("Configuración guardada. No se creó ningún vínculo.")).toBeInTheDocument();
+    expect(await first.partnership.getMine()).toBeNull();
+    expect(await first.preferences.getMine()).toMatchObject({ shareGeneralStatus: true, shareCheckinCompleted: false, askBeforeAdvice: true });
+    expect(await first.habits.listMine()).toEqual([expect.objectContaining({ name: "Caminar después de comer" })]);
+  });
+
+  it("requires both members to resume a paused partnership", async () => {
+    const user = userEvent.setup();
+    const { first, second } = await activeUsers();
+    await first.partnership.pause();
+    renderRoute(first, "/partnership");
+    await user.click(await screen.findByRole("button", { name: "Solicitar reactivación" }));
+    expect(await screen.findByText(/sigue pausado hasta que la otra persona confirme/)).toBeInTheDocument();
+    expect((await first.partnership.getMine())?.status).toBe("paused");
+    cleanup();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    renderRoute(second, "/partnership");
+    await user.click(await screen.findByRole("button", { name: "Confirmar reactivación" }));
+    expect(await screen.findByText("El apoyo está habilitado solamente mediante acciones explícitas.")).toBeInTheDocument();
   });
 
   it("supports explicit request, acknowledge, and close without automatic alerts", async () => {
@@ -130,7 +165,7 @@ describe("partnership routes", () => {
     renderRoute(first, "/partnership");
     expect(await screen.findByRole("link", { name: "Solicitudes de apoyo" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Pausar vínculo" }));
-    expect(await screen.findByText("El acceso de apoyo está revocado. Tus preferencias siguen siendo tuyas.")).toBeInTheDocument();
+    expect(await screen.findByText(/El acceso de apoyo está revocado/)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Solicitudes de apoyo" })).not.toBeInTheDocument();
     cleanup();
     renderRoute(first, "/partnership/support");

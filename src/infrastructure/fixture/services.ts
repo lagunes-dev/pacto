@@ -155,11 +155,19 @@ export function createFixtureServices(store = createFixtureStore(), now: () => D
     async rejectInvite(code) { return consentServices().partnership.rejectInvite(code); },
     async cancelInvite() { return consentServices().partnership.cancelInvite(); },
     async pause() { return consentServices().partnership.pause(); },
+    async requestResume() { return consentServices().partnership.requestResume(); },
+    async confirmResume() { return consentServices().partnership.confirmResume(); },
     async end() { return consentServices().partnership.end(); },
   };
   const preferences: PreferenceRepository = {
     async getMine() { return consentServices().preferences.getMine(); },
     async updateMine(input) { return consentServices().preferences.updateMine(input); },
+    async completeSetup(input) {
+      const { goal, ...preferencesInput } = input;
+      const result = await consentServices().preferences.updateMine(preferencesInput);
+      await habits.create({ name: goal, priority: 1 });
+      return result;
+    },
   };
   const support: SupportRepository = {
     async list() { return consentServices().support.list(); },

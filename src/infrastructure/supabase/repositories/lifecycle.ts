@@ -25,6 +25,7 @@ type PartnershipStateRow = {
   partner_id: string | null;
   accepted_at: string | null;
   created_at: string;
+  resume_requested_by: string | null;
 };
 type InviteRow = { invite_code: string; partnership_status: "pending"; expires_at: string };
 type ProfileRow = { id: string; display_name: string };
@@ -95,6 +96,7 @@ export function createSupabaseLifecycleRepositories(client: LifecycleClient): {
 } {
   const partnership: PartnershipRepository = {
     async getMine() {
+      const viewerId = await actorId(client);
       const state = rows<PartnershipStateRow>(await client.rpc("get_my_partnership_state"), "Partnership is unavailable.")[0];
       if (!state) return null;
 
@@ -111,6 +113,7 @@ export function createSupabaseLifecycleRepositories(client: LifecycleClient): {
         id: state.partnership_id,
         status: state.partnership_status,
         partner: { userId: state.partner_id ?? "", displayName },
+        resumeStatus: state.resume_requested_by ? (state.resume_requested_by === viewerId ? "requested-by-me" : "awaiting-my-confirmation") : "none",
         createdAt: state.created_at,
         updatedAt: state.accepted_at ?? state.created_at,
       };
@@ -142,6 +145,18 @@ export function createSupabaseLifecycleRepositories(client: LifecycleClient): {
     },
     async pause() {
       first(await client.rpc("pause_partnership"), "Partnership pause failed.");
+      const state = await partnership.getMine();
+      if (!state) throw new Error("Partnership is unavailable.");
+      return state;
+    },
+    async requestResume() {
+      first(await client.rpc("request_partnership_resume"), "Partnership resume request failed.");
+      const state = await partnership.getMine();
+      if (!state) throw new Error("Partnership is unavailable.");
+      return state;
+    },
+    async confirmResume() {
+      first(await client.rpc("confirm_partnership_resume"), "Partnership resume confirmation failed.");
       const state = await partnership.getMine();
       if (!state) throw new Error("Partnership is unavailable.");
       return state;

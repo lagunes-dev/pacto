@@ -2,7 +2,7 @@ import { createHabitInputSchema, type Habit } from "../../../features/habits/mod
 import type { HabitRepository } from "../../../features/habits/repository";
 import type { PersonalProgress } from "../../../features/progress/model";
 import type { ProgressRepository } from "../../../features/progress/repository";
-import { preferenceUpdateSchema, type PreferenceUpdate, type PreferenceView } from "../../../features/preferences/model";
+import { onboardingInputSchema, preferenceUpdateSchema, type PreferenceUpdate, type PreferenceView } from "../../../features/preferences/model";
 import type { PreferenceRepository } from "../../../features/preferences/repository";
 import type { PactoSupabaseClient } from "../client";
 
@@ -21,14 +21,24 @@ type Query = PromiseLike<QueryResult> & {
 export type PrivateDataClient = {
   auth: { getUser(): Promise<{ data: { user: { id: string } | null }; error: { message?: string } | null }> };
   from(table: string): Query;
+  rpc(name: string, args?: Record<string, unknown>): Promise<QueryResult>;
 };
 
 type GoalRow = { id: string; user_id: string; name: string; priority: 1 | 2 | 3; active: boolean; created_at: string };
 type DailyEntryRow = { entry_date: string; completed_at: string | null };
-type PreferenceRow = { share_percentages: boolean; share_general_status: boolean; updated_at: string };
+type SharingPreferenceRow = {
+  share_checkin_completed: boolean; share_general_status: boolean; share_habit_details: boolean;
+  share_craving_level: boolean; share_percentages: boolean; updated_at: string;
+};
+type CommunicationPreferenceRow = {
+  no_threats: boolean; ask_before_advice: boolean; no_comparisons: boolean;
+  pause_allowed: boolean; preferred_support: string; updated_at: string;
+};
+type ProfilePreferenceRow = { timezone: string };
 
 const habitColumns = "id,user_id,name,priority,active,created_at";
-const preferenceColumns = "share_percentages,share_general_status,updated_at";
+const sharingColumns = "share_checkin_completed,share_general_status,share_habit_details,share_craving_level,share_percentages,updated_at";
+const communicationColumns = "no_threats,ask_before_advice,no_comparisons,pause_allowed,preferred_support,updated_at";
 const habitUpdateSchema = createHabitInputSchema.partial().strict().refine((value) => Object.keys(value).length > 0);
 
 function resultError(error: { message?: string } | null, fallback: string): Error {
@@ -58,11 +68,20 @@ function mapHabit(row: GoalRow): Habit {
   };
 }
 
-function mapPreference(row: PreferenceRow): PreferenceView {
+function mapPreference(sharing: SharingPreferenceRow, communication: CommunicationPreferenceRow, profile: ProfilePreferenceRow): PreferenceView {
   return {
-    shareProgress: row.share_percentages,
-    allowSupportRequests: row.share_general_status,
-    updatedAt: row.updated_at,
+    shareCheckinCompleted: sharing.share_checkin_completed,
+    shareGeneralStatus: sharing.share_general_status,
+    shareHabitDetails: sharing.share_habit_details,
+    shareCravingLevel: sharing.share_craving_level,
+    sharePercentages: sharing.share_percentages,
+    noThreats: communication.no_threats,
+    askBeforeAdvice: communication.ask_before_advice,
+    noComparisons: communication.no_comparisons,
+    pauseAllowed: communication.pause_allowed,
+    preferredSupport: communication.preferred_support,
+    timezone: profile.timezone,
+    updatedAt: sharing.updated_at > communication.updated_at ? sharing.updated_at : communication.updated_at,
   };
 }
 
@@ -116,17 +135,53 @@ export function createSupabasePrivateRepositories(client: PrivateDataClient): {
 
   const preferences: PreferenceRepository = {
     async getMine() {
-      const result = await client.from("sharing_preferences").select(preferenceColumns).single();
-      return mapPreference(unwrap<PreferenceRow>(result, "Preferences are unavailable."));
+      const [sharingResult, communicationResult, profileResult] = await Promise.all([
+        client.from("sharing_preferences").select(sharingColumns).single(),
+        client.from("communication_preferences").select(communicationColumns).single(),
+        client.from("profiles").select("timezone").single(),
+      ]);
+      return mapPreference(
+        unwrap<SharingPreferenceRow>(sharingResult, "Sharing preferences are unavailable."),
+        unwrap<CommunicationPreferenceRow>(communicationResult, "Communication preferences are unavailable."),
+        unwrap<ProfilePreferenceRow>(profileResult, "Profile preferences are unavailable."),
+      );
     },
     async updateMine(input: PreferenceUpdate) {
       const safe = preferenceUpdateSchema.parse(input);
-      const changes: Record<string, boolean> = {};
-      if (safe.shareProgress !== undefined) changes.share_percentages = safe.shareProgress;
-      if (safe.allowSupportRequests !== undefined) changes.share_general_status = safe.allowSupportRequests;
-      if (Object.keys(changes).length === 0) return preferences.getMine();
-      const result = await client.from("sharing_preferences").update(changes).select(preferenceColumns).single();
-      return mapPreference(unwrap<PreferenceRow>(result, "Preference update failed."));
+      const sharing: Record<string, boolean> = {};
+      const communication: Record<string, boolean | string> = {};
+      if (safe.shareCheckinCompleted !== undefined) sharing.share_checkin_completed = safe.shareCheckinCompleted;
+      if (safe.shareGeneralStatus !== undefined) sharing.share_general_status = safe.shareGeneralStatus;
+      if (safe.shareHabitDetails !== undefined) sharing.share_habit_details = safe.shareHabitDetails;
+      if (safe.shareCravingLevel !== undefined) sharing.share_craving_level = safe.shareCravingLevel;
+      if (safe.sharePercentages !== undefined) sharing.share_percentages = safe.sharePercentages;
+      if (safe.noThreats !== undefined) communication.no_threats = safe.noThreats;
+      if (safe.askBeforeAdvice !== undefined) communication.ask_before_advice = safe.askBeforeAdvice;
+      if (safe.noComparisons !== undefined) communication.no_comparisons = safe.noComparisons;
+      if (safe.pauseAllowed !== undefined) communication.pause_allowed = safe.pauseAllowed;
+      if (safe.preferredSupport !== undefined) communication.preferred_support = safe.preferredSupport;
+      const [sharingResult, communicationResult, profileResult] = await Promise.all([
+        Object.keys(sharing).length ? client.from("sharing_preferences").update(sharing).select(sharingColumns).single() : Promise.resolve(null),
+        Object.keys(communication).length ? client.from("communication_preferences").update(communication).select(communicationColumns).single() : Promise.resolve(null),
+        safe.timezone ? client.from("profiles").update({ timezone: safe.timezone }).select("timezone").single() : Promise.resolve(null),
+      ]);
+      if (sharingResult) unwrap(sharingResult, "Sharing preference update failed.");
+      if (communicationResult) unwrap(communicationResult, "Communication preference update failed.");
+      if (profileResult) unwrap(profileResult, "Timezone update failed.");
+      return preferences.getMine();
+    },
+    async completeSetup(input) {
+      const safe = onboardingInputSchema.parse(input);
+      const result = await client.rpc("complete_onboarding", {
+        timezone_name: safe.timezone, goal_name: safe.goal,
+        share_checkin: safe.shareCheckinCompleted, share_status: safe.shareGeneralStatus,
+        share_habits: safe.shareHabitDetails, share_craving: safe.shareCravingLevel,
+        share_rates: safe.sharePercentages, boundary_no_threats: safe.noThreats,
+        boundary_ask_advice: safe.askBeforeAdvice, boundary_no_comparisons: safe.noComparisons,
+        boundary_pause: safe.pauseAllowed, support_preference: safe.preferredSupport,
+      });
+      unwrap(result, "Onboarding could not be completed.");
+      return preferences.getMine();
     },
   };
 

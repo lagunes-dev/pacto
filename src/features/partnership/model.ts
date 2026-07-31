@@ -6,6 +6,7 @@ export type PartnershipView = {
   id: string;
   status: PartnershipStatus;
   partner: PartnerView;
+  resumeStatus?: "none" | "requested-by-me" | "awaiting-my-confirmation";
   createdAt: string;
   updatedAt: string;
 };

@@ -59,7 +59,7 @@ describe("development fixture privacy contracts", () => {
     expect(JSON.stringify(await a.partnership.getMine())).not.toMatch(/notes|habits|summary|email/i);
     await b.partnership.pause();
     await expect(a.support.list()).rejects.toThrow("Active partnership required");
-    expect(await a.preferences.getMine()).toMatchObject({ shareProgress: false, allowSupportRequests: true });
+    expect(await a.preferences.getMine()).toMatchObject({ sharePercentages: false, shareGeneralStatus: true });
     expect(registrationA.session.user.id).not.toBe((await b.auth.getSession())?.user.id);
   });
 });

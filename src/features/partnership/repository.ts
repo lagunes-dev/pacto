@@ -7,5 +7,7 @@ export interface PartnershipRepository {
   rejectInvite(code: string): Promise<void>;
   cancelInvite(): Promise<void>;
   pause(): Promise<PartnershipView>;
+  requestResume(): Promise<PartnershipView>;
+  confirmResume(): Promise<PartnershipView>;
   end(): Promise<PartnershipView>;
 }

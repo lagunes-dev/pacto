@@ -8,8 +8,8 @@ import type { SupportRepository } from "../../features/support/repository";
 
 export type FixtureUser = { id: string; email: string; displayName: string };
 type InviteRecord = { code: string; inviterId: string; inviteeId: string; status: InviteStatus; expiresAt: string };
-type PartnershipRecord = { id: string; memberIds: [string, string]; status: PartnershipStatus; createdAt: string; updatedAt: string };
-type PreferenceRecord = { shareProgress: boolean; allowSupportRequests: boolean; updatedAt: string };
+type PartnershipRecord = { id: string; memberIds: [string, string]; status: PartnershipStatus; resumeRequestedBy?: string; createdAt: string; updatedAt: string };
+type PreferenceRecord = PreferenceView;
 type SupportRecord = { id: string; partnershipId: string; requesterId: string; type: SupportType; status: SupportStatus; createdAt: string; updatedAt: string };
 
 export type PartnershipFixtureOptions = { users: [FixtureUser, FixtureUser]; now?: () => Date; inviteTtlMs?: number };
@@ -17,7 +17,12 @@ export type PartnershipFixtureOptions = { users: [FixtureUser, FixtureUser]; now
 export function createPartnershipFixture({ users, now = () => new Date(), inviteTtlMs = 86_400_000 }: PartnershipFixtureOptions) {
   const invites: InviteRecord[] = [];
   const partnerships: PartnershipRecord[] = [];
-  const preferences = new Map(users.map((user) => [user.id, { shareProgress: false, allowSupportRequests: true, updatedAt: now().toISOString() }]));
+  const preferences = new Map(users.map((user) => [user.id, {
+    shareCheckinCompleted: true, shareGeneralStatus: true, shareHabitDetails: false,
+    shareCravingLevel: false, sharePercentages: false, noThreats: true,
+    askBeforeAdvice: true, noComparisons: true, pauseAllowed: true,
+    preferredSupport: "Pregúntame antes de darme consejos", timezone: "America/Mexico_City", updatedAt: now().toISOString(),
+  }]));
   const supportRequests: SupportRecord[] = [];
   const userById = (id: string) => users.find((user) => user.id === id);
   const membership = (actorId: string) => partnerships.find((item) => item.memberIds.includes(actorId));
@@ -34,10 +39,10 @@ export function createPartnershipFixture({ users, now = () => new Date(), invite
   const mapPartnership = (record: PartnershipRecord, actorId: string): PartnershipView => {
     const partner = userById(record.memberIds.find((id) => id !== actorId) ?? "");
     if (!partner) throw new Error("Partnership unavailable.");
-    return { id: record.id, status: record.status, partner: { userId: partner.id, displayName: partner.displayName }, createdAt: record.createdAt, updatedAt: record.updatedAt };
+    return { id: record.id, status: record.status, partner: { userId: partner.id, displayName: partner.displayName }, resumeStatus: record.resumeRequestedBy ? (record.resumeRequestedBy === actorId ? "requested-by-me" : "awaiting-my-confirmation") : "none", createdAt: record.createdAt, updatedAt: record.updatedAt };
   };
   const mapInvite = ({ code, status, expiresAt }: InviteRecord): InviteView => ({ code, status, expiresAt });
-  const mapPreference = (record: PreferenceRecord): PreferenceView => ({ shareProgress: record.shareProgress, allowSupportRequests: record.allowSupportRequests, updatedAt: record.updatedAt });
+  const mapPreference = (record: PreferenceRecord): PreferenceView => structuredClone(record);
   const mapSupport = (record: SupportRecord, actorId: string): SupportRequestView => ({
     id: record.id, type: record.type, status: record.status, requestedBy: record.requesterId === actorId ? "me" : "partner", createdAt: record.createdAt, updatedAt: record.updatedAt,
   });
@@ -46,11 +51,6 @@ export function createPartnershipFixture({ users, now = () => new Date(), invite
     if (!record || record.status !== "active") throw new Error("Active partnership required.");
     return record;
   };
-  const preferenceMembership = (actorId: string) => {
-    const record = membership(actorId);
-    if (!record || !["active", "paused"].includes(record.status)) throw new Error("Partnership required.");
-  };
-
   function forUser(actorId: string): { partnership: PartnershipRepository; preferences: PreferenceRepository; support: SupportRepository } {
     if (!userById(actorId)) throw new Error("Fixture user unavailable.");
 
@@ -83,6 +83,21 @@ export function createPartnershipFixture({ users, now = () => new Date(), invite
         removePendingPartnership(invite);
       },
       async pause() { return transition("paused"); },
+      async requestResume() {
+        const record = membership(actorId);
+        if (!record || record.status !== "paused" || record.resumeRequestedBy) throw new Error("Paused partnership required.");
+        record.resumeRequestedBy = actorId;
+        record.updatedAt = now().toISOString();
+        return mapPartnership(record, actorId);
+      },
+      async confirmResume() {
+        const record = membership(actorId);
+        if (!record || record.status !== "paused" || !record.resumeRequestedBy || record.resumeRequestedBy === actorId) throw new Error("Partner confirmation required.");
+        record.status = "active";
+        record.resumeRequestedBy = undefined;
+        record.updatedAt = now().toISOString();
+        return mapPartnership(record, actorId);
+      },
       async end() { return transition("ended"); },
     };
 
@@ -113,20 +128,23 @@ export function createPartnershipFixture({ users, now = () => new Date(), invite
       if (!record) throw new Error("Partnership unavailable.");
       assertPartnershipTransition(record.status, status);
       record.status = status;
+      record.resumeRequestedBy = undefined;
       record.updatedAt = now().toISOString();
       return mapPartnership(record, actorId);
     }
 
     const preferenceRepository: PreferenceRepository = {
-      async getMine() { preferenceMembership(actorId); return mapPreference(preferences.get(actorId)!); },
+      async getMine() { return mapPreference(preferences.get(actorId)!); },
       async updateMine(input) {
-        preferenceMembership(actorId);
         const safe = preferenceUpdateSchema.parse(input);
         const record = preferences.get(actorId)!;
-        if (safe.shareProgress !== undefined) record.shareProgress = safe.shareProgress;
-        if (safe.allowSupportRequests !== undefined) record.allowSupportRequests = safe.allowSupportRequests;
+        Object.assign(record, safe);
         record.updatedAt = now().toISOString();
         return mapPreference(record);
+      },
+      async completeSetup(input) {
+        const { goal: _goal, ...preferencesInput } = input;
+        return preferenceRepository.updateMine(preferencesInput);
       },
     };
 

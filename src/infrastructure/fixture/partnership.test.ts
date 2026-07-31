@@ -62,14 +62,24 @@ describe("two-user partnership fixture", () => {
   it("keeps preferences owner-scoped and rejects unsafe fields", async () => {
     const { a, b } = setup();
     await activate(a, b);
-    expect(await a.preferences.updateMine({ shareProgress: true })).toMatchObject({ shareProgress: true });
-    expect(await b.preferences.getMine()).toMatchObject({ shareProgress: false });
+    expect(await a.preferences.updateMine({ sharePercentages: true })).toMatchObject({ sharePercentages: true });
+    expect(await b.preferences.getMine()).toMatchObject({ sharePercentages: false });
     await a.partnership.pause();
-    expect(await b.preferences.updateMine({ allowSupportRequests: false })).toMatchObject({ allowSupportRequests: false });
-    expect(await a.preferences.getMine()).toMatchObject({ shareProgress: true, allowSupportRequests: true });
-    await expect(a.preferences.updateMine({ shareProgress: false, ownerId: userB.id } as never)).rejects.toThrow();
-    expect(await b.preferences.getMine()).toMatchObject({ shareProgress: false, allowSupportRequests: false });
-    expect(() => preferenceUpdateSchema.parse({ shareProgress: true, ownerId: userB.id, privateNote: "secret" })).toThrow();
+    expect(await b.preferences.updateMine({ shareGeneralStatus: false })).toMatchObject({ shareGeneralStatus: false });
+    expect(await a.preferences.getMine()).toMatchObject({ sharePercentages: true, shareGeneralStatus: true });
+    await expect(a.preferences.updateMine({ sharePercentages: false, ownerId: userB.id } as never)).rejects.toThrow();
+    expect(await b.preferences.getMine()).toMatchObject({ sharePercentages: false, shareGeneralStatus: false });
+    expect(() => preferenceUpdateSchema.parse({ sharePercentages: true, ownerId: userB.id, privateNote: "secret" })).toThrow();
+  });
+
+  it("keeps a one-sided resume paused until the other member confirms", async () => {
+    const { a, b } = setup();
+    await activate(a, b);
+    await a.partnership.pause();
+    expect(await a.partnership.requestResume()).toMatchObject({ status: "paused", resumeStatus: "requested-by-me" });
+    expect(await b.partnership.getMine()).toMatchObject({ status: "paused", resumeStatus: "awaiting-my-confirmation" });
+    await expect(a.partnership.confirmResume()).rejects.toThrow("Partner confirmation required");
+    expect(await b.partnership.confirmResume()).toMatchObject({ status: "active", resumeStatus: "none" });
   });
 
   it("allows only the other active member to acknowledge and close support", async () => {
@@ -106,7 +116,7 @@ describe("two-user partnership fixture", () => {
     const request = await a.support.create("encouragement");
     const payload = JSON.stringify({ partnership: await b.partnership.getMine(), preference, request });
     expect(payload).not.toMatch(/email|ownerId|privateNote|notes|metadata|a@example\.com|b@example\.com/);
-    expect(Object.keys(preference)).toEqual(["shareProgress", "allowSupportRequests", "updatedAt"]);
+    expect(Object.keys(preference)).toEqual(expect.arrayContaining(["shareCheckinCompleted", "shareGeneralStatus", "shareHabitDetails", "shareCravingLevel", "sharePercentages", "noThreats", "askBeforeAdvice", "noComparisons", "pauseAllowed", "preferredSupport", "timezone", "updatedAt"]));
     expect(Object.keys(request)).toEqual(["id", "type", "status", "requestedBy", "createdAt", "updatedAt"]);
   });
 });

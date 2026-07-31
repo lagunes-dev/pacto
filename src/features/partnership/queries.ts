@@ -80,6 +80,16 @@ export function usePausePartnership() {
   return useRevokePartnership("pause", partnership.pause);
 }
 
+export function useRequestPartnershipResume() {
+  const { partnership } = useRepositories();
+  return usePartnershipMutation<void, PartnershipView>("request-resume", partnership.requestResume);
+}
+
+export function useConfirmPartnershipResume() {
+  const { partnership } = useRepositories();
+  return usePartnershipMutation<void, PartnershipView>("confirm-resume", partnership.confirmResume);
+}
+
 export function useEndPartnership() {
   const { partnership } = useRepositories();
   return useRevokePartnership("end", partnership.end);

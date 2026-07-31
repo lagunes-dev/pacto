@@ -56,6 +56,7 @@ describe("Supabase partnership and support repositories", () => {
       id: "partnership-1",
       status: "active",
       partner: { userId: "user-b", displayName: "Partner B" },
+      resumeStatus: "none",
       createdAt: "2026-07-29T10:00:00Z",
       updatedAt: "2026-07-29T10:05:00Z",
     });
