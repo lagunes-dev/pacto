@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -36,6 +36,7 @@ function renderHome(services: Services, checkinRepository: DailyCheckinRepositor
       checkinRepository={checkinRepository}
       recoveryRepository={services.recovery}
       offlineQueue={createTestOfflineQueue()}
+      backgroundSync={false}
     >
       <RouterProvider router={router} />
     </AppProviders>,
@@ -51,6 +52,7 @@ async function confirmTimezoneIfRequested(user: ReturnType<typeof userEvent.setu
 }
 
 afterEach(() => {
+  cleanup();
   vi.restoreAllMocks();
   Object.defineProperty(window.navigator, "onLine", { configurable: true, value: true });
 });

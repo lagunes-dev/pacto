@@ -26,7 +26,7 @@ async function renderProgress(result: PersonalProgress | (() => Promise<Personal
   const services = createFixtureServices();
   await services.auth.register({ email: "alex@pacto.test", password: "private-password" });
   const getMine = typeof result === "function" ? result : vi.fn().mockResolvedValue(result);
-  render(<MemoryRouter><AppProviders authPort={services.auth} progressRepository={{ getMine }}><ProgressRoute /></AppProviders></MemoryRouter>);
+  render(<MemoryRouter><AppProviders authPort={services.auth} progressRepository={{ getMine }} backgroundSync={false}><ProgressRoute /></AppProviders></MemoryRouter>);
 }
 
 afterEach(cleanup);

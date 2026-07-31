@@ -12,7 +12,7 @@ type Services = ReturnType<typeof createFixtureServices>;
 
 function renderRoute(services: Services, entry: string, partnership = services.partnership) {
   const router = createMemoryRouter(appRoutes, { initialEntries: [entry] });
-  render(<AppProviders authPort={services.auth} habitRepository={services.habits} progressRepository={services.progress} partnershipRepository={partnership} preferenceRepository={services.preferences} supportRepository={services.support}><RouterProvider router={router} /></AppProviders>);
+  render(<AppProviders authPort={services.auth} habitRepository={services.habits} progressRepository={services.progress} partnershipRepository={partnership} preferenceRepository={services.preferences} supportRepository={services.support} backgroundSync={false}><RouterProvider router={router} /></AppProviders>);
   return router;
 }
 

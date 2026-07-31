@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -19,7 +19,7 @@ async function ownerServices() {
 }
 
 function renderPath(path: string, services: Services, recovery: RecoveryRepository = services.recovery) {
-  render(<AppProviders authPort={services.auth} habitRepository={services.habits} progressRepository={services.progress} checkinRepository={services.checkin} recoveryRepository={recovery} offlineQueue={createTestOfflineQueue()}><RouterProvider router={createMemoryRouter(appRoutes, { initialEntries: [path] })} /></AppProviders>);
+  render(<AppProviders authPort={services.auth} habitRepository={services.habits} progressRepository={services.progress} checkinRepository={services.checkin} recoveryRepository={recovery} offlineQueue={createTestOfflineQueue()} backgroundSync={false}><RouterProvider router={createMemoryRouter(appRoutes, { initialEntries: [path] })} /></AppProviders>);
 }
 
 async function fillPlan(user: ReturnType<typeof userEvent.setup>) {
@@ -31,6 +31,7 @@ async function fillPlan(user: ReturnType<typeof userEvent.setup>) {
 }
 
 afterEach(() => {
+  cleanup();
   vi.restoreAllMocks();
   Object.defineProperty(window.navigator, "onLine", { configurable: true, value: true });
 });

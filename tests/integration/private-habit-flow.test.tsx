@@ -29,6 +29,7 @@ function renderRoute(services: Services, initialEntry: string) {
       authPort={services.auth}
       habitRepository={services.habits}
       progressRepository={services.progress}
+      backgroundSync={false}
     >
       <RouterProvider router={router} />
     </AppProviders>,

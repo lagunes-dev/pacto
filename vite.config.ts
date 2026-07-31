@@ -34,6 +34,9 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    fileParallelism: false,
+    pool: "forks",
+    maxWorkers: 1,
     include: ["src/**/*.test.{ts,tsx}", "tests/integration/**/*.test.{ts,tsx}"],
     setupFiles: "./src/test/setup.ts",
   },

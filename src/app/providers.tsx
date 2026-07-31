@@ -30,11 +30,12 @@ type ProviderOverrides = {
   push?: PushSubscriptionPort;
   checkinRepository?: DailyCheckinRepository;
   recoveryRepository?: RecoveryRepository;
+  backgroundSync?: boolean;
 };
 
 const RepositoryContext = createContext<Omit<AppServices, "auth"> | null>(null);
 
-export function AppProviders({ children, authPort, habitRepository, progressRepository, partnershipRepository, preferenceRepository, supportRepository, offlineQueue, realtime, push, checkinRepository, recoveryRepository }: PropsWithChildren<ProviderOverrides>) {
+export function AppProviders({ children, authPort, habitRepository, progressRepository, partnershipRepository, preferenceRepository, supportRepository, offlineQueue, realtime, push, checkinRepository, recoveryRepository, backgroundSync = true }: PropsWithChildren<ProviderOverrides>) {
   const [services] = useState(() => createAppServices());
   const queue = offlineQueue ?? services.offlineQueue;
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
@@ -55,8 +56,8 @@ export function AppProviders({ children, authPort, habitRepository, progressRepo
     <QueryClientProvider client={queryClient}>
       <AuthProvider authPort={authPort ?? services.auth} offlineQueue={queue}>
         <RepositoryContext.Provider value={repositories}>
-          <OfflineReplayCoordinator />
-          <RealtimeCoordinator><ToastProvider>{children}</ToastProvider></RealtimeCoordinator>
+          {backgroundSync && <OfflineReplayCoordinator />}
+          {backgroundSync ? <RealtimeCoordinator><ToastProvider>{children}</ToastProvider></RealtimeCoordinator> : <ToastProvider>{children}</ToastProvider>}
         </RepositoryContext.Provider>
       </AuthProvider>
     </QueryClientProvider>
