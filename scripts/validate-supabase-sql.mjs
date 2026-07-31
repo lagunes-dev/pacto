@@ -14,6 +14,7 @@ const migrationPaths = [
   "supabase/migrations/202607290005_qualify_support_returning.sql",
   "supabase/migrations/202607300001_realtime_push.sql",
   "supabase/migrations/202607300002_daily_checkin_rpc.sql",
+  "supabase/migrations/202607310001_demo_parity_recovery.sql",
 ];
 const migrations = migrationPaths.map((path) => readFileSync(`${root}/${path}`, "utf8"));
 const [schema, policies, lifecycle] = migrations;
@@ -24,6 +25,7 @@ const profileBootstrap = migrations[6];
 const qualifiedSupport = migrations[7];
 const realtimePush = migrations[8];
 const dailyCheckin = migrations[9];
+const recovery = migrations[10];
 const rollbackPath = "supabase/rollback/202607280003_fail_closed_authorization.sql";
 const rollback = readFileSync(`${root}/${rollbackPath}`, "utf8");
 const runtimeTestPaths = [
@@ -31,6 +33,7 @@ const runtimeTestPaths = [
   "supabase/tests/lifecycle_rpcs.sql",
   "supabase/tests/realtime_push_rls.sql",
   "supabase/tests/daily_checkin_rpc.sql",
+  "supabase/tests/demo_parity_recovery.sql",
 ];
 const runtimeAssertions = runtimeTestPaths.map((path) => readFileSync(`${root}/${path}`, "utf8")).join("\n");
 const envExample = readFileSync(`${root}/.env.example`, "utf8");
@@ -94,6 +97,12 @@ const assertions = [
   [dailyCheckin.includes("revoke all on function public.save_daily_checkin(text, smallint, jsonb) from public, anon, authenticated") && dailyCheckin.includes("grant execute on function public.save_daily_checkin(text, smallint, jsonb) to authenticated"), "daily check-in execution is authenticated-only"],
   [!dailyCheckin.includes("private_notes") && !dailyCheckin.includes("shared_daily_summaries") && !dailyCheckin.includes("support_requests"), "daily check-in RPC cannot write private or shared data"],
   [runtimeAssertions.includes("foreign owner goal was accepted") && runtimeAssertions.includes("repeat save created more than one owner/local-day row") && runtimeAssertions.includes("daily check-in RPC is not security invoker"), "runtime SQL covers check-in owner isolation, idempotence, and invoker security"],
+  [recovery.includes("create table if not exists public.recovery_event_records") && recovery.includes("create table if not exists public.weekly_review_records"), "Registro event and weekly record tables are versioned"],
+  [recovery.includes("force row level security") && recovery.includes("recovery_events_owner_select") && recovery.includes("weekly_reviews_owner_select"), "Registro records use forced owner-only RLS"],
+  [recovery.includes("p_operation_id uuid") && recovery.includes("p_expected_revision integer") && recovery.includes("request_hash") && recovery.includes("Recovery revision conflict"), "recovery RPC enforces idempotency and revision conflicts"],
+  [recovery.includes("revoke insert, update, delete on public.recovery_plans, public.private_notes from authenticated") && recovery.includes("grant execute on function public.save_recovery_record"), "recovery and note writes are RPC-only"],
+  [!recovery.match(/insert into public\.(support_requests|shared_daily_summaries)/) && runtimeAssertions.includes("private recovery payload leaked into a support/shared projection"), "recovery payload is excluded from support and shared projections"],
+  [runtimeAssertions.includes("partner could read an owner private note") && runtimeAssertions.includes("partner could read an owner weekly review") && runtimeAssertions.includes("operation ID accepted a different payload") && runtimeAssertions.includes("stale expected revision overwrote recovery history"), "runtime SQL covers private record isolation, idempotency hash, and conflicts"],
   [migrationPaths.indexOf("supabase/migrations/202607300001_realtime_push.sql") > migrationPaths.indexOf("supabase/migrations/202607290005_qualify_support_returning.sql"), "Realtime push migration runs after the existing migration chain"],
   [lifecycle.includes("drop function if exists public.create_partnership_invite(text);\ncreate or replace function public.create_partnership_invite(target_email text)"), "base lifecycle migration drops the exact invite signature before recreation"],
   [lifecycleRpcs.slice(-3).every((rpc) => fullResponse.includes(`grant execute on function public.${rpc} to authenticated`)), "full response migration preserves explicit authenticated support RPC grants"],
