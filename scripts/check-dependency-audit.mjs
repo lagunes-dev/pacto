@@ -1,16 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 
-const reviewedInventory = [
-  "@trickfilm400/rollup-plugin-off-main-thread:high",
-  "brace-expansion:high",
-  "ejs:high",
-  "filelist:high",
-  "jake:high",
-  "minimatch:high",
-  "vite-plugin-pwa:high",
-  "workbox-build:high",
-].sort();
+const reviewedInventory = [].sort();
 
 async function auditReport() {
   const inputIndex = process.argv.indexOf("--input");
@@ -35,8 +26,7 @@ try {
   if (JSON.stringify(actual) !== JSON.stringify(reviewedInventory)) {
     throw new Error(`Unreviewed dependency audit inventory. Expected ${reviewedInventory.join(", ")}; received ${actual.join(", ") || "none"}.`);
   }
-  console.log("Dependency audit classified: 8 HIGH findings in the reviewed vite-plugin-pwa/Workbox development chain.");
-  console.log("Breaking/force remediation remains prohibited; review lockfile and generated PWA artifacts before dependency changes.");
+  console.log("Dependency audit classified: no current findings in the reviewed development dependency tree.");
 } catch (error) {
   console.error(error.message);
   process.exitCode = 1;

@@ -875,6 +875,7 @@ h1 {
 .intervention-option span,
 .intervention-option small {
   display: block;
+  min-width: 0;
 }
 
 .intervention-option small,
@@ -1369,6 +1370,7 @@ h1 {
   inset: 0;
   margin: auto;
   width: min(560px, calc(100% - 32px));
+  max-width: calc(100% - 32px);
   max-height: min(720px, calc(100dvh - 32px));
   padding: 0;
   overflow: auto;
@@ -1398,6 +1400,7 @@ h1 {
 }
 
 .modal-head > div {
+  flex: 1 1 auto;
   min-width: 0;
 }
 
