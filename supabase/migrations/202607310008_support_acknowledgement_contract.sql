@@ -3,7 +3,7 @@ begin;
 drop function if exists public.acknowledge_support_request(uuid);
 drop function if exists public.acknowledge_support_request(uuid, text);
 
-create function public.acknowledge_support_request(request_id uuid, response_type text)
+create function public.acknowledge_support_request(request_id uuid, selected_response text)
 returns table (support_request_id uuid, requester_id uuid, support_type text,
   request_message text, response_type text, support_status public.support_status,
   created_at timestamptz, acknowledged_at timestamptz, closed_at timestamptz)
@@ -11,13 +11,13 @@ language plpgsql security definer set search_path = ''
 as $$
 declare actor_id uuid := private.require_actor();
 begin
-  if request_id is null or response_type is null
-     or response_type not in ('available_now', 'available_later', 'here_with_you') then
+  if request_id is null or selected_response is null
+     or selected_response not in ('available_now', 'available_later', 'here_with_you') then
     raise exception 'support request unavailable' using errcode = '22023';
   end if;
   return query update public.support_requests r
     set status = 'acknowledged', acknowledged_at = clock_timestamp(),
-        response_type = acknowledge_support_request.response_type
+        response_type = selected_response
     from public.partnerships p
     where r.id = request_id and p.id = r.partnership_id and p.status = 'active'
       and actor_id in (p.inviter_id, p.invitee_id) and actor_id <> r.requester_id
