@@ -1,4 +1,4 @@
-# Demo parity — Slice 1
+# Demo parity — completed slices
 
 Slice 1 is complete. It establishes the authenticated parity shell while keeping every unsupported demo workflow explicit and unavailable.
 
@@ -18,11 +18,20 @@ Authentication remains required for every canonical route. Production data conti
 
 Fixture data is limited to development and browser tests. It is not evidence of production persistence, authorization, sharing, or hosted RLS execution.
 
-## Deferred to later slices
+## Daily check-in slice delivered
 
-- Check-in behavior and persistence.
+- Authenticated `/inicio` now loads active goals and records one online check-in per local day.
+- Every loaded goal requires `Cumplido` or `Hubo evento`; event triggers are bounded and craving is limited to 1–5.
+- A repeated same-day save updates the existing daily and goal entries atomically after server confirmation.
+- Craving 4–5 opens one accessible intervention with the four approved voluntary actions. Closing restores focus; asking for support requires an explicit handoff and never sends automatically.
+- Failed writes retain the local draft and offer retry without announcing success. Offline attempts are blocked and are never queued or replayed.
+- The persistence contract excludes private notes, ownership, partner data, alerts, rankings, calories, percentages, photos, location, and surveillance fields.
+- Browser evidence covers the authenticated journey, same-day revision, online failure/retry, offline blocking, intervention focus, and 320/390/430px layouts.
+
+## Still deferred
+
 - Recovery and private notes.
-- Craving-triggered intervention and support workflows.
+- Full support workflow parity, automatic alerts, push, and email.
 - Agreement controls and partnership parity.
 - Full progress parity.
 - Offline replay and reconciliation.
@@ -35,4 +44,4 @@ Fixture data is limited to development and browser tests. It is not evidence of 
 | PR2 (`0b819aa`) | Toast/modal primitives, setup shell, and truthful topbar controls | Revert PR2 while retaining PR1 navigation and routes. |
 | PR3 | Responsive parity styling, Playwright evidence, and this completion record | Revert PR3 while retaining the functional PR1/PR2 shell. |
 
-`reference/demo-original/` is an immutable visual and interaction reference. Slice 1 does not modify it or claim completion of the deferred workflows above.
+`reference/demo-original/` remains an immutable visual and interaction reference. The completed slices preserve its dark sage/cream language and privacy-first intent without claiming the deferred workflows above.

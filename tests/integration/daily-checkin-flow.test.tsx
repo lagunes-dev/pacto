@@ -167,6 +167,14 @@ describe("daily check-in flow", () => {
       cravingLevel: 3,
       habits: [{ goalId: store.habits[0].id, state: "event", trigger: "Antojo" }],
     });
+    const payload = JSON.stringify(save.mock.calls.at(-1)?.[0]);
+    for (const excluded of [
+      "note", "owner", "ranking", "calorie", "percentage", "photo", "location",
+      "surveillance", "partner", "alert",
+    ]) {
+      expect(payload.toLowerCase()).not.toContain(excluded);
+    }
+    expect(screen.queryByText(/culpa|ranking|calorías|porcentaje|foto|ubicación|vigilancia|nota privada|alerta automática/i)).not.toBeInTheDocument();
   });
 
   it("announces success only after the repository confirms the save", async () => {
