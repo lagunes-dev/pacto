@@ -3,86 +3,108 @@ import "fake-indexeddb/auto";
 import { describe, expect, it, vi } from "vitest";
 
 import { createIndexedDbOfflineQueue } from "../../infrastructure/indexeddb/offlineQueue";
+import type { QueueRecord } from "./model";
+
+const recovery = (alternative = "Tomar agua") => ({
+  kind: "recovery" as const,
+  payload: { expectedRevision: 1, trigger: "Antojo", moment: "Noche", need: "Pausa", alternative },
+});
 
 function makeQueue(now = () => 100) {
-  const databaseName = `queue-${crypto.randomUUID()}`;
   return createIndexedDbOfflineQueue({
-    databaseName,
+    databaseName: `queue-${crypto.randomUUID()}`,
     now,
     operationId: (createdAt, ordinal) => `${createdAt}-${ordinal.toString().padStart(2, "0")}`,
   });
 }
 
-async function activateQueue(now = () => 100, actorId = "actor-a") {
+async function activeQueue(now = () => 100) {
   const queue = makeQueue(now);
-  await queue.activateActor(actorId);
+  await queue.activateActor("actor-a");
   return queue;
 }
 
-describe("actor-scoped offline queue", () => {
-  it("stores a validated plan with idempotency and retry metadata", async () => {
-    const queue = await activateQueue();
-    const record = await queue.enqueue("actor-a", { kind: "plan", payload: { title: "Weekly plan" } });
+describe("recovery replay queue", () => {
+  it("stores only a validated recovery plan with hash and visible pending state", async () => {
+    const queue = await activeQueue();
+    const record = await queue.enqueue("actor-a", recovery());
 
-    expect(record).toEqual({
-      actorId: "actor-a", createdAt: 100, kind: "plan", lastError: null,
-      operationId: "100-00", payload: { title: "Weekly plan" }, retryCount: 0, status: "pending",
-    });
+    expect(record).toMatchObject({ actorId: "actor-a", operationId: "100-00", retryCount: 0, status: "pending", nextAttemptAt: 100 });
+    expect(record.requestHash).toMatch(/^[a-f0-9]{64}$/);
     expect(await queue.list("actor-a")).toEqual([record]);
   });
 
-  it.each(["support", "partnership", "unknown"])("rejects the %s kind without writing", async (kind) => {
-    const queue = await activateQueue();
+  it.each(["check-in", "review", "support", "partnership", "private-note"])('rejects the forbidden "%s" kind without writing', async (kind) => {
+    const queue = await activeQueue();
     await expect(queue.enqueue("actor-a", { kind, payload: {} } as never)).rejects.toThrow("not supported");
     expect(await queue.list("actor-a")).toEqual([]);
   });
 
-  it("validates minimal payloads before writing", async () => {
-    const queue = await activateQueue();
-    await expect(queue.enqueue("actor-a", { kind: "plan", payload: { title: "", token: "secret" } } as never)).rejects.toThrow();
+  it("rejects private-note fields and stale actors", async () => {
+    const queue = await activeQueue();
+    await expect(queue.enqueue("actor-a", { ...recovery(), payload: { ...recovery().payload, privateNote: "secret" } } as never)).rejects.toThrow();
+    await expect(queue.enqueue("actor-b", recovery())).rejects.toThrow("authenticated active actor");
     expect(await queue.list("actor-a")).toEqual([]);
   });
 
-  it("lists only one actor in deterministic FIFO order, including equal timestamps", async () => {
-    const clock = vi.fn().mockReturnValueOnce(200).mockReturnValueOnce(100).mockReturnValue(100);
-    const queue = await activateQueue(clock);
-    await queue.enqueue("actor-a", { kind: "review", payload: { summary: "third" } });
-    await queue.enqueue("actor-a", { kind: "plan", payload: { title: "first" } });
-    await queue.enqueue("actor-a", { kind: "check-in", payload: { habitId: "h1", completed: true } });
-    expect((await queue.list("actor-a")).map((record) => record.operationId)).toEqual(["100-01", "100-02", "200-00"]);
+  it("replays FIFO exactly once and removes a confirmed receipt", async () => {
+    const clock = vi.fn().mockReturnValueOnce(200).mockReturnValueOnce(100).mockReturnValue(300);
+    const queue = await activeQueue(clock);
+    await queue.enqueue("actor-a", recovery("second"));
+    await queue.enqueue("actor-a", recovery("first"));
+    const executor = vi.fn(async (_record: QueueRecord) => ({ receipt: "confirmed" }));
+
+    await queue.replay("actor-a", executor);
+    await queue.replay("actor-a", executor);
+
+    expect(executor.mock.calls.map(([record]) => record.operationId)).toEqual(["100-01", "200-00"]);
+    expect(await queue.list("actor-a")).toEqual([]);
   });
 
-  it("rejects unauthenticated, stale, and arbitrary actors without writing", async () => {
-    const queue = makeQueue();
-    const draft = { kind: "plan", payload: { title: "Private" } } as const;
+  it("stops on first transient failure and retries after exponential backoff", async () => {
+    let time = 100;
+    const queue = await activeQueue(() => time);
+    await queue.enqueue("actor-a", recovery("first"));
+    await queue.enqueue("actor-a", recovery("second"));
+    const executor = vi.fn().mockRejectedValueOnce(new Error("network unavailable")).mockResolvedValue({ receipt: true });
 
-    await expect(queue.enqueue("actor-a", draft)).rejects.toThrow("authenticated active actor");
-    await queue.activateActor("actor-a");
-    await expect(queue.enqueue("actor-b", draft)).rejects.toThrow("authenticated active actor");
-    await queue.activateActor("actor-b");
-    await expect(queue.enqueue("actor-a", draft)).rejects.toThrow("authenticated active actor");
+    await queue.replay("actor-a", executor);
+    expect(executor).toHaveBeenCalledTimes(1);
+    expect(await queue.list("actor-a")).toMatchObject([{ status: "pending", retryCount: 1, nextAttemptAt: 1100 }, { status: "pending" }]);
 
+    time = 1100;
+    await queue.replay("actor-a", executor);
+    expect(executor).toHaveBeenCalledTimes(3);
     expect(await queue.list("actor-a")).toEqual([]);
-    expect(await queue.list("actor-b")).toEqual([]);
   });
 
-  it("purges the departing actor on sign-out and actor change", async () => {
-    const queue = makeQueue();
-    await queue.activateActor("actor-a");
-    await queue.enqueue("actor-a", { kind: "plan", payload: { title: "private" } });
-    await queue.activateActor("actor-b");
-    expect(await queue.list("actor-a")).toEqual([]);
+  it("keeps a stale revision as a visible conflict without overwriting or continuing", async () => {
+    const queue = await activeQueue();
+    await queue.enqueue("actor-a", recovery("first"));
+    await queue.enqueue("actor-a", recovery("second"));
+    const executor = vi.fn(async () => { throw new Error("revision conflict"); });
 
-    await queue.enqueue("actor-b", { kind: "plan", payload: { title: "also private" } });
+    await queue.replay("actor-a", executor);
+    await queue.replay("actor-a", executor);
+
+    expect(executor).toHaveBeenCalledTimes(1);
+    expect(await queue.list("actor-a")).toMatchObject([{ status: "conflict", lastError: "revision conflict" }, { status: "pending" }]);
+  });
+
+  it("cancels replay and purges work on sign-out", async () => {
+    const queue = await activeQueue();
+    await queue.enqueue("actor-a", recovery());
+    let release!: () => void;
+    const pending = queue.replay("actor-a", (_record, signal) => new Promise((resolve) => {
+      signal.addEventListener("abort", () => resolve(undefined));
+      release = () => resolve(undefined);
+    }));
+    await vi.waitFor(async () => expect((await queue.list("actor-a"))[0]?.status).toBe("replaying"));
+
     await queue.activateActor(null);
-    expect(await queue.list("actor-b")).toEqual([]);
-  });
+    release();
+    await pending;
 
-  it("has no replay path and leaves records pending when connectivity changes", async () => {
-    const queue = await activateQueue();
-    const record = await queue.enqueue("actor-a", { kind: "plan", payload: { title: "Deferred" } });
-    window.dispatchEvent(new Event("online"));
-    expect(await queue.list("actor-a")).toEqual([record]);
-    expect("dequeue" in queue || "send" in queue || "replay" in queue).toBe(false);
+    expect(await queue.list("actor-a")).toEqual([]);
   });
 });

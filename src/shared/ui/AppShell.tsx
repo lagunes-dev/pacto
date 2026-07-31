@@ -9,6 +9,7 @@ import type { PushStatus } from "../../features/push/port";
 import { SetupDialog } from "../../features/setup/components/SetupDialog";
 import { useRepositories } from "../../app/providers";
 import { useToast } from "./ToastProvider";
+import { useOfflineSyncStatus } from "../../features/offline-queue/OfflineReplayCoordinator";
 
 const notificationMessages: Record<PushStatus, string> = {
   unsupported: "Este navegador no admite notificaciones.",
@@ -56,6 +57,7 @@ export function AppShell({ children }: PropsWithChildren) {
   const location = useLocation();
   const { session } = useAuth();
   const isOnline = useConnectivity();
+  const sync = useOfflineSyncStatus();
   const activeRoute = parityRoutes.find((route) => route.matches(location.pathname));
   const title = activeRoute?.title ?? "Espacio privado";
   const today = new Intl.DateTimeFormat(appConfig.locale, {
@@ -93,6 +95,9 @@ export function AppShell({ children }: PropsWithChildren) {
           </div>
           <div className="app-status">
             <InstallGuidance />
+            {session && sync.state !== "idle" && <span className={`status-chip${sync.state === "conflict" || sync.state === "failed" ? " status-chip-offline" : ""}`} role="status">
+              {sync.state === "conflict" ? "Conflicto al sincronizar" : sync.state === "failed" ? "Sincronización fallida" : sync.state === "replaying" ? "Sincronizando…" : `${sync.count} en espera`}
+            </span>}
             {session && <SessionTopbarControls />}
             <span
               className={`status-chip${isOnline ? "" : " status-chip-offline"}`}

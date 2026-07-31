@@ -14,6 +14,7 @@ import type { PushSubscriptionPort } from "../features/push/port";
 import type { DailyCheckinRepository } from "../features/checkin/repository";
 import type { RecoveryRepository } from "../features/recovery/repository";
 import { RealtimeCoordinator } from "../features/realtime/RealtimeCoordinator";
+import { OfflineReplayCoordinator } from "../features/offline-queue/OfflineReplayCoordinator";
 import { createAppServices, type AppServices } from "../infrastructure";
 import { ToastProvider } from "../shared/ui/ToastProvider";
 
@@ -31,10 +32,11 @@ type ProviderOverrides = {
   recoveryRepository?: RecoveryRepository;
 };
 
-const RepositoryContext = createContext<Omit<AppServices, "auth" | "offlineQueue"> | null>(null);
+const RepositoryContext = createContext<Omit<AppServices, "auth"> | null>(null);
 
 export function AppProviders({ children, authPort, habitRepository, progressRepository, partnershipRepository, preferenceRepository, supportRepository, offlineQueue, realtime, push, checkinRepository, recoveryRepository }: PropsWithChildren<ProviderOverrides>) {
   const [services] = useState(() => createAppServices());
+  const queue = offlineQueue ?? services.offlineQueue;
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
   const repositories = {
     habits: habitRepository ?? services.habits,
@@ -46,12 +48,14 @@ export function AppProviders({ children, authPort, habitRepository, progressRepo
     push: push ?? services.push,
     checkin: checkinRepository ?? services.checkin,
     recovery: recoveryRepository ?? services.recovery,
+    offlineQueue: queue,
   };
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider authPort={authPort ?? services.auth} offlineQueue={offlineQueue ?? services.offlineQueue}>
+      <AuthProvider authPort={authPort ?? services.auth} offlineQueue={queue}>
         <RepositoryContext.Provider value={repositories}>
+          <OfflineReplayCoordinator />
           <RealtimeCoordinator><ToastProvider>{children}</ToastProvider></RealtimeCoordinator>
         </RepositoryContext.Provider>
       </AuthProvider>
@@ -63,4 +67,8 @@ export function useRepositories() {
   const repositories = useContext(RepositoryContext);
   if (!repositories) throw new Error("useRepositories must be used inside AppProviders");
   return repositories;
+}
+
+export function useOptionalRepositories() {
+  return useContext(RepositoryContext);
 }

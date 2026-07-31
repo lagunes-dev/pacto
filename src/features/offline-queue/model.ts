@@ -1,9 +1,13 @@
 import { z } from "zod";
 
 const payloads = {
-  "check-in": z.object({ habitId: z.string().min(1), completed: z.boolean() }).strict(),
-  plan: z.object({ title: z.string().trim().min(1).max(160) }).strict(),
-  review: z.object({ summary: z.string().trim().min(1).max(500) }).strict(),
+  recovery: z.object({
+    expectedRevision: z.number().int().min(0),
+    trigger: z.string().trim().min(1).max(200),
+    moment: z.string().trim().min(1).max(200),
+    need: z.string().trim().min(1).max(500),
+    alternative: z.string().trim().min(1).max(500),
+  }).strict(),
 } as const;
 
 export type QueueKind = keyof typeof payloads;
@@ -17,7 +21,9 @@ export type QueueRecord<K extends QueueKind = QueueKind> = QueueDraft<K> & {
   actorId: string;
   createdAt: number;
   retryCount: number;
-  status: "pending" | "failed";
+  requestHash: string;
+  nextAttemptAt: number;
+  status: "pending" | "replaying" | "conflict" | "failed";
   lastError: string | null;
 };
 

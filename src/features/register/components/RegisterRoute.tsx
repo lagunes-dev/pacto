@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router";
 
 import { useRecoveryTimeline, useSaveRecovery } from "../../recovery/queries";
+import { useAuth } from "../../auth/queries/AuthProvider";
+import { useRepositories } from "../../../app/providers";
 
 const initialDraft = { trigger: "", moment: "Después de cenar", need: "Una alternativa preparada", alternative: "", privateNote: "" };
 
@@ -24,6 +26,8 @@ export function RegisterRoute() {
   const timeline = useRecoveryTimeline();
   const save = useSaveRecovery();
   const online = useOnline();
+  const { session } = useAuth();
+  const { offlineQueue } = useRepositories();
   const [draft, setDraft] = useState(initialDraft);
   const [notice, setNotice] = useState<string | null>(null);
   const revision = timeline.data?.[0]?.revision ?? 0;
@@ -37,7 +41,24 @@ export function RegisterRoute() {
     event.preventDefault();
     setNotice(null);
     if (!online) {
-      setNotice("Estás sin conexión. El plan no se guardó ni se puso en espera.");
+      if (draft.privateNote.trim()) {
+        setNotice("Estás sin conexión. Las notas privadas no se ponen en espera; tu borrador sigue aquí.");
+        return;
+      }
+      if (!session) {
+        setNotice("Estás sin conexión. Inicia sesión antes de poner un plan en espera.");
+        return;
+      }
+      try {
+        await offlineQueue.enqueue(session.user.id, {
+          kind: "recovery",
+          payload: { expectedRevision: revision, trigger: draft.trigger, moment: draft.moment, need: draft.need, alternative: draft.alternative },
+        });
+        setDraft(initialDraft);
+        setNotice("Plan en espera. Se sincronizará en orden cuando vuelva la conexión.");
+      } catch (error) {
+        setNotice(`El plan no se puso en espera. ${errorMessage(error)} Tu borrador sigue aquí.`);
+      }
       return;
     }
     try {
@@ -68,9 +89,9 @@ export function RegisterRoute() {
             <label className="full">Nota privada opcional<textarea value={draft.privateNote} onChange={(event) => update("privateNote", event.target.value)} maxLength={4000} placeholder="Sólo tú puedes leer esto." /><small>Separada de los datos compartidos. No se incluye en solicitudes de apoyo.</small></label>
           </div>
           <blockquote className="plan-preview"><q>{preview}</q><small>El objetivo es facilitar una alternativa, no imponer una prohibición.</small></blockquote>
-          {!online && <p className="service-alert" role="alert">Sin conexión. Puedes conservar este borrador, pero no guardarlo todavía.</p>}
+          {!online && <p className="service-alert" role="alert">Sin conexión. Puedes poner en espera un plan sin nota privada. Las notas y las demás acciones requieren conexión.</p>}
           {save.isError && <p className="service-alert" role="alert"><strong>No se guardó el plan.</strong> {errorMessage(save.error)} Tu borrador sigue aquí.</p>}
-          {notice && <p className={notice.startsWith("Estás") ? "service-alert" : "notice"} role="status">{notice}</p>}
+          {notice && <p className={notice.startsWith("Estás") || notice.startsWith("El plan no") ? "service-alert" : "notice"} role="status">{notice}</p>}
           <div className="form-actions"><button className="secondary-button" type="button" onClick={clear}>Limpiar</button><button className="primary-button" type="submit" disabled={save.isPending}>{save.isPending ? "Guardando…" : "Guardar plan y continuar"}</button></div>
           <Link className="text-link" to="/habits/new">Administrar hábitos personales</Link>
         </form>

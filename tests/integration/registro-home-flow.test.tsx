@@ -88,7 +88,7 @@ describe("Registro and Home recovery flow", () => {
     expect(screen.queryByText("No compartir")).not.toBeInTheDocument();
   });
 
-  it("blocks offline saving without calling the repository", async () => {
+  it("keeps an offline private-note draft without queueing or calling the repository", async () => {
     const user = userEvent.setup();
     const services = await ownerServices();
     const save = vi.spyOn(services.recovery, "save");
@@ -97,7 +97,7 @@ describe("Registro and Home recovery flow", () => {
     Object.defineProperty(window.navigator, "onLine", { configurable: true, value: false });
     window.dispatchEvent(new Event("offline"));
     await user.click(screen.getByRole("button", { name: "Guardar plan y continuar" }));
-    expect(screen.getByText(/El plan no se guardó ni se puso en espera/)).toBeInTheDocument();
+    expect(await screen.findByText(/Las notas privadas no se ponen en espera/)).toBeInTheDocument();
     expect(save).not.toHaveBeenCalled();
   });
 });
