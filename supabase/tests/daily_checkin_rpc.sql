@@ -17,15 +17,19 @@ insert into public.goals (id, user_id, name, priority, active) values
 on conflict (id) do nothing;
 
 do $$ begin
-  if has_function_privilege('anon', 'public.save_daily_checkin(text,smallint,jsonb)', 'execute') then
+  if has_function_privilege('anon', 'public.save_daily_checkin(text,integer,jsonb)', 'execute') then
     raise exception 'anon can execute daily check-in RPC';
   end if;
-  if not has_function_privilege('authenticated', 'public.save_daily_checkin(text,smallint,jsonb)', 'execute') then
+  if not has_function_privilege('authenticated', 'public.save_daily_checkin(text,integer,jsonb)', 'execute') then
     raise exception 'authenticated cannot execute daily check-in RPC';
+  end if;
+  if not has_function_privilege('authenticated', 'public.save_daily_checkin(text,smallint,jsonb)', 'execute') then
+    raise exception 'authenticated cannot execute smallint daily check-in RPC';
   end if;
   if exists (
     select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'public' and p.proname = 'save_daily_checkin' and p.prosecdef
+    where n.nspname = 'public' and p.proname = 'save_daily_checkin'
+      and p.proargtypes = '25 23 3802'::oidvector and p.prosecdef
   ) then raise exception 'daily check-in RPC is not security invoker'; end if;
 end $$;
 

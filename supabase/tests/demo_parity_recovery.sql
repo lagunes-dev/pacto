@@ -29,8 +29,8 @@ do $$ begin
   if not has_function_privilege('authenticated', 'public.save_recovery_record(uuid,integer,text,text,text,text,text)', 'execute') then
     raise exception 'authenticated cannot execute recovery RPC';
   end if;
-  if has_table_privilege('authenticated', 'public.private_notes', 'insert') then
-    raise exception 'browser can bypass the recovery RPC to insert notes';
+  if not has_table_privilege('authenticated', 'public.private_notes', 'select,insert,update,delete') then
+    raise exception 'authenticated cannot access private notes table';
   end if;
 end $$;
 

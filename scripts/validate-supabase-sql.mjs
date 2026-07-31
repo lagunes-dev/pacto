@@ -18,6 +18,10 @@ const migrationPaths = [
   "supabase/migrations/202607310005_partnership_updated_at_compatibility.sql",
   "supabase/migrations/202607310006_support_request_message_contract.sql",
   "supabase/migrations/202607310007_support_request_contract_hardening.sql",
+  "supabase/migrations/202607310008_support_acknowledgement_contract.sql",
+  "supabase/migrations/202607310009_daily_checkin_integer_compatibility.sql",
+  "supabase/migrations/202607310010_daily_checkin_conflict_target.sql",
+  "supabase/migrations/202607310011_private_notes_authenticated_grants.sql",
 ];
 const migrations = migrationPaths.map((path) => readFileSync(`${root}/${path}`, "utf8"));
 const [schema, policies, lifecycle] = migrations;
@@ -31,6 +35,10 @@ const dailyCheckin = migrations[9];
 const recovery = migrations[10];
 const supportMessageContract = migrations[12];
 const supportContractHardening = migrations[13];
+const supportAcknowledgementContract = migrations[14];
+const dailyCheckinCompatibility = migrations[15];
+const dailyCheckinConflictTarget = migrations[16];
+const privateNotesGrants = migrations[17];
 const rollbackPath = "supabase/rollback/202607280003_fail_closed_authorization.sql";
 const rollback = readFileSync(`${root}/${rollbackPath}`, "utf8");
 const runtimeTestPaths = [
@@ -102,6 +110,11 @@ const assertions = [
   [supportMessageContract.includes("add column if not exists request_message text") && supportMessageContract.includes("add column if not exists response_type text"), "support message RPC migration creates its referenced columns before recreation"],
   [supportContractHardening.includes("request_message_length") && supportContractHardening.includes("char_length(request_message) between 1 and 160") && supportContractHardening.includes("response_type_allowlist") && supportContractHardening.includes("response_type is null or response_type in ('available_now', 'available_later', 'here_with_you')"), "support contract columns are nullable and constrained"],
   [supportContractHardening.includes("create index if not exists support_requests_partnership_idx") && policies.includes("support_active_members_select") && policies.includes("p.status = 'active'"), "support hardening preserves indexed active-partnership access"],
+  [supportAcknowledgementContract.includes("create function public.acknowledge_support_request(request_id uuid, selected_response text)") && supportAcknowledgementContract.includes("create function public.acknowledge_support_request(request_id uuid)"), "support acknowledgement exposes exact and compatibility signatures"],
+  [supportAcknowledgementContract.includes("selected_response not in ('available_now', 'available_later', 'here_with_you')") && supportAcknowledgementContract.includes("r.status = 'pending'"), "support acknowledgement enforces the exact response allow-list and pending state"],
+  [supportAcknowledgementContract.includes("p.status = 'active'") && supportAcknowledgementContract.includes("actor_id <> r.requester_id") && supportAcknowledgementContract.includes("set search_path = ''"), "support acknowledgement requires an active recipient and fixed search path"],
+  [supportAcknowledgementContract.includes("request_message text") && supportAcknowledgementContract.includes("closed_at timestamptz") && !supportAcknowledgementContract.includes("private_notes") && !supportAcknowledgementContract.includes("alert"), "support acknowledgement returns only the privacy-safe DTO"],
+  [supportAcknowledgementContract.includes("grant execute on function public.acknowledge_support_request(uuid, text), public.acknowledge_support_request(uuid) to authenticated"), "support acknowledgement grants execution only to authenticated callers"],
   [realtimePush.includes("supabase_realtime") && realtimePush.includes("partnership_realtime_state") && realtimePush.includes("alter publication supabase_realtime add table"), "Realtime publication registration is conditional and allowlisted"],
   [realtimePush.includes("create table if not exists public.push_subscriptions") && realtimePush.includes("endpoint text not null unique") && realtimePush.includes("p256dh text not null") && realtimePush.includes("auth text not null"), "push subscriptions persist only owner routing material"],
   [realtimePush.includes("protect_push_subscription_owner_trigger") && realtimePush.includes("push subscription owner is immutable"), "push subscription ownership is immutable"],
@@ -111,15 +124,21 @@ const assertions = [
   [dailyCheckin.includes("auth.uid()") && dailyCheckin.includes("America/Mexico_City") && dailyCheckin.includes("pg_timezone_names"), "daily check-in derives actor and validated local day server-side"],
   [dailyCheckin.includes("on conflict (user_id, entry_date) do update") && dailyCheckin.includes("on conflict (daily_entry_id, goal_id) do update"), "daily and habit rows are idempotently upserted in one RPC"],
   [dailyCheckin.includes("revoke all on function public.save_daily_checkin(text, smallint, jsonb) from public, anon, authenticated") && dailyCheckin.includes("grant execute on function public.save_daily_checkin(text, smallint, jsonb) to authenticated"), "daily check-in execution is authenticated-only"],
+  [dailyCheckinCompatibility.includes("create function public.save_daily_checkin(p_timezone text, p_craving_level integer, p_habits jsonb)") && dailyCheckinCompatibility.includes("p_craving_level::smallint") && dailyCheckinCompatibility.includes("security invoker"), "daily check-in integer compatibility delegates to the existing invoker RPC"],
+  [dailyCheckinCompatibility.includes("revoke all on function public.save_daily_checkin(text, integer, jsonb) from public, anon, authenticated") && dailyCheckinCompatibility.includes("grant execute on function public.save_daily_checkin(text, integer, jsonb) to authenticated"), "daily check-in integer compatibility is authenticated-only"],
+  [dailyCheckinConflictTarget.includes("on conflict on constraint daily_entries_user_id_entry_date_key do update") && !dailyCheckinConflictTarget.includes("on conflict (user_id, entry_date) do update") && dailyCheckinConflictTarget.includes("create or replace function public.save_daily_checkin"), "daily check-in uses an unambiguous unique constraint conflict target"],
+  [dailyCheckinConflictTarget.includes("security invoker") && dailyCheckinConflictTarget.includes("auth.uid()") && dailyCheckinConflictTarget.includes("grant execute on function public.save_daily_checkin(text, smallint, jsonb) to authenticated"), "daily check-in conflict-target fix preserves invoker identity and authenticated access"],
   [!dailyCheckin.includes("private_notes") && !dailyCheckin.includes("shared_daily_summaries") && !dailyCheckin.includes("support_requests"), "daily check-in RPC cannot write private or shared data"],
-  [runtimeAssertions.includes("foreign owner goal was accepted") && runtimeAssertions.includes("repeat save created more than one owner/local-day row") && runtimeAssertions.includes("daily check-in RPC is not security invoker"), "runtime SQL covers check-in owner isolation, idempotence, and invoker security"],
+  [runtimeAssertions.includes("foreign owner goal was accepted") && runtimeAssertions.includes("repeat save created more than one owner/local-day row") && runtimeAssertions.includes("daily check-in RPC is not security invoker") && runtimeAssertions.includes("text,integer,jsonb"), "runtime SQL covers check-in owner isolation, idempotence, integer compatibility, and invoker security"],
   [recovery.includes("create table if not exists public.recovery_event_records") && recovery.includes("create table if not exists public.weekly_review_records"), "Registro event and weekly record tables are versioned"],
   [recovery.includes("force row level security") && recovery.includes("recovery_events_owner_select") && recovery.includes("weekly_reviews_owner_select"), "Registro records use forced owner-only RLS"],
   [recovery.includes("p_operation_id uuid") && recovery.includes("p_expected_revision integer") && recovery.includes("request_hash") && recovery.includes("Recovery revision conflict"), "recovery RPC enforces idempotency and revision conflicts"],
-  [recovery.includes("revoke insert, update, delete on public.recovery_plans, public.private_notes from authenticated") && recovery.includes("grant execute on function public.save_recovery_record"), "recovery and note writes are RPC-only"],
+  [recovery.includes("revoke insert, update, delete on public.recovery_plans, public.private_notes from authenticated") && recovery.includes("grant execute on function public.save_recovery_record"), "recovery writes remain RPC-only"],
+  [privateNotesGrants.includes("grant select, insert, update, delete on public.private_notes to authenticated"), "authenticated private note table access is explicitly granted after recovery hardening"],
   [!recovery.match(/insert into public\.(support_requests|shared_daily_summaries)/) && runtimeAssertions.includes("private recovery payload leaked into a support/shared projection"), "recovery payload is excluded from support and shared projections"],
   [runtimeAssertions.includes("partner could read an owner private note") && runtimeAssertions.includes("partner could read an owner weekly review") && runtimeAssertions.includes("operation ID accepted a different payload") && runtimeAssertions.includes("stale expected revision overwrote recovery history"), "runtime SQL covers private record isolation, idempotency hash, and conflicts"],
   [migrationPaths.indexOf("supabase/migrations/202607300001_realtime_push.sql") > migrationPaths.indexOf("supabase/migrations/202607290005_qualify_support_returning.sql"), "Realtime push migration runs after the existing migration chain"],
+  [migrationPaths.at(-1) === "supabase/migrations/202607310011_private_notes_authenticated_grants.sql", "private note grant migration runs last"],
   [lifecycle.includes("drop function if exists public.create_partnership_invite(text);\ncreate or replace function public.create_partnership_invite(target_email text)"), "base lifecycle migration drops the exact invite signature before recreation"],
   [lifecycleRpcs.slice(-3).every((rpc) => fullResponse.includes(`grant execute on function public.${rpc} to authenticated`)), "full response migration preserves explicit authenticated support RPC grants"],
   [migrationPaths.indexOf("supabase/migrations/202607290001_support_rpc_response_compatibility.sql") > migrationPaths.indexOf("supabase/migrations/202607280003_lifecycle_rpcs.sql"), "compatibility migration runs after lifecycle RPCs"],
