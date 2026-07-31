@@ -12,6 +12,7 @@ import { localDayAt, resolveTimezone } from "../../features/checkin/timezone";
 import { createPartnershipFixture } from "./partnership";
 import { saveRecoveryInputSchema, type RecoveryRecord } from "../../features/recovery/model";
 import type { RecoveryRepository } from "../../features/recovery/repository";
+import { derivePersonalInsights } from "../../features/insights/model";
 
 type Account = { id: string; email: string; password: string; displayName: string };
 type PartnershipFixture = ReturnType<typeof createPartnershipFixture>;
@@ -71,7 +72,18 @@ export function createFixtureServices(store = createFixtureStore(), now: () => D
   };
 
   const progress: ProgressRepository = {
-    async getMine() { return { habits: await habits.listMine(), completedEntryCount: 0, activeDayCount: 0 }; },
+    async getMine() {
+      const ownerId = requireOwner();
+      const entries = [...store.checkins.entries()].filter(([key]) => key.startsWith(`${ownerId}:`)).map(([, value]) => value);
+      const recoveryEvents = (store.recoveries.get(ownerId) ?? []).map((record) => ({
+        trigger: record.trigger, moment: record.moment, alternative: record.alternative, recordedAt: record.recordedAt,
+      }));
+      return {
+        habits: await habits.listMine(), completedEntryCount: entries.length,
+        activeDayCount: new Set(entries.map(({ entryDate }) => entryDate)).size,
+        evidence: { personal: derivePersonalInsights(recoveryEvents, []), cooperation: null },
+      };
+    },
   };
 
   const checkin: DailyCheckinRepository = {

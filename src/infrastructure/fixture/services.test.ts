@@ -26,7 +26,7 @@ describe("development fixture privacy contracts", () => {
     await b.auth.register(ownerB);
 
     expect(await b.habits.listMine()).toEqual([]);
-    expect(await b.progress.getMine()).toEqual({ habits: [], completedEntryCount: 0, activeDayCount: 0 });
+    expect(await b.progress.getMine()).toMatchObject({ habits: [], completedEntryCount: 0, activeDayCount: 0, evidence: { personal: { eventCount: 0 }, cooperation: null } });
     await expect(b.habits.update(habit.id, { name: "Stolen" })).rejects.toThrow("not found");
     await expect(b.habits.remove(habit.id)).rejects.toThrow("not found");
     expect((await a.habits.listMine())[0]?.name).toBe("Walk");

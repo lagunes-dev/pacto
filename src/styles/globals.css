@@ -1031,6 +1031,27 @@ h1 {
   color: var(--color-text-muted);
 }
 
+.insights-section, .support-metrics, .cooperation-card { display: grid; gap: 0.8rem; }
+.insight-grid, .cooperation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+.insight-card, .support-metrics, .cooperation-card, .cooperation-grid article {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 1rem;
+}
+.insight-card { display: grid; gap: 0.55rem; }
+.insight-card h3, .insight-card p, .support-metrics p, .cooperation-card p { margin: 0; }
+.insight-card > p:not(.eyebrow), .support-metrics > p:last-child, .cooperation-card > p { color: var(--color-text-muted); line-height: 1.55; }
+.insight-card > strong { color: var(--color-accent); font-size: 0.85rem; }
+.cooperation-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.cooperation-grid article { display: grid; gap: 0.25rem; }
+.cooperation-grid strong { color: var(--color-accent); font-family: var(--font-display); font-size: 1.8rem; }
+.cooperation-grid span { color: var(--color-text-muted); }
+
 .active-habits {
   display: grid;
   gap: 0.8rem;
@@ -1138,6 +1159,8 @@ h1 {
   .progress-grid {
     grid-template-columns: 1fr;
   }
+
+  .insight-grid, .cooperation-grid { grid-template-columns: 1fr; }
 
   .consent-grid { grid-template-columns: 1fr; }
 }

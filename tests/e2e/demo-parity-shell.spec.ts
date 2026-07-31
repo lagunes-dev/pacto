@@ -44,7 +44,7 @@ test("navigates the four canonical views with a sole active item", async ({ page
   const routes = [
     ["Inicio", "/inicio", "La próxima decisión sí cuenta."],
     ["Registro", "/registro", "Entender, corregir, continuar."],
-    ["Progreso", "/progreso", "Tu progreso personal"],
+    ["Progreso", "/progreso", "Datos que sugieren una acción"],
     ["Acuerdo", "/acuerdo", null],
   ] as const;
 

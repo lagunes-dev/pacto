@@ -61,7 +61,7 @@ describe("canonical parity shell", () => {
     }
 
     await user.click(within(desktop).getByRole("link", { name: "Progreso" }));
-    expect(await screen.findByRole("heading", { name: "Tu progreso personal" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Datos que sugieren una acción" })).toBeInTheDocument();
     expect(screen.getByText("Aprendizajes personales", { selector: ".topbar strong" })).toBeInTheDocument();
     for (const navigation of [desktop, mobile]) {
       expect(within(navigation).getAllByRole("link", { current: "page" })).toHaveLength(1);

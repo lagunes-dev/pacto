@@ -103,6 +103,13 @@ describe("Supabase private repositories", () => {
         { entry_date: "2026-07-28", completed_at: "2026-07-28T12:00:00Z" },
         { entry_date: "2026-07-29", completed_at: null },
       ], error: null }],
+      recovery_event_records: [{ data: [
+        { trigger: "Stress", moment: "Night", alternative: "Tea", recorded_at: "2026-07-28T20:00:00Z" },
+        { trigger: "Stress", moment: "Night", alternative: "Tea", recorded_at: "2026-07-29T20:00:00Z" },
+        { trigger: "Hunger", moment: "Night", alternative: "Fruit", recorded_at: "2026-07-30T20:00:00Z" },
+      ], error: null }],
+      support_requests: [{ data: [{ created_at: "2026-07-30T10:00:00Z", acknowledged_at: "2026-07-30T10:15:00Z" }], error: null }],
+      "rpc:get_progress_cooperation": [{ data: [{ checkins_completed: 4, support_requests_responded: 1, reviews_completed: 1 }], error: null }],
     });
     const { progress } = createSupabasePrivateRepositories(client);
 
@@ -110,8 +117,10 @@ describe("Supabase private repositories", () => {
       habits: [{ id: goal.id }],
       completedEntryCount: 1,
       activeDayCount: 2,
+      evidence: { personal: { frequentTrigger: { value: "Stress", occurrences: 2 }, averageSupportResponseMinutes: 15 }, cooperation: { checkinsCompleted: 4 } },
     });
-    expect(operations.some((operation) => operation.action === "eq")).toBe(false);
+    expect(operations.find((operation) => operation.table === "support_requests" && operation.action === "eq")?.value).toEqual({ column: "requester_id", value: "actor-1" });
+    expect(JSON.stringify(operations)).not.toMatch(/private_notes|body/);
   });
 
   it("maps and updates owner preferences without owner input", async () => {

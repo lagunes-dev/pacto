@@ -2,6 +2,8 @@ import { createHabitInputSchema, type Habit } from "../../../features/habits/mod
 import type { HabitRepository } from "../../../features/habits/repository";
 import type { PersonalProgress } from "../../../features/progress/model";
 import type { ProgressRepository } from "../../../features/progress/repository";
+import { derivePersonalInsights, type ProgressEventEvidence, type SupportResponseEvidence } from "../../../features/insights/model";
+import type { WeeklyCooperation } from "../../../features/weekly-review/model";
 import { onboardingInputSchema, preferenceUpdateSchema, type PreferenceUpdate, type PreferenceView } from "../../../features/preferences/model";
 import type { PreferenceRepository } from "../../../features/preferences/repository";
 import type { PactoSupabaseClient } from "../client";
@@ -26,6 +28,9 @@ export type PrivateDataClient = {
 
 type GoalRow = { id: string; user_id: string; name: string; priority: 1 | 2 | 3; active: boolean; created_at: string };
 type DailyEntryRow = { entry_date: string; completed_at: string | null };
+type RecoveryEventRow = { trigger: string; moment: string; alternative: string; recorded_at: string };
+type SupportResponseRow = { created_at: string; acknowledged_at: string | null };
+type CooperationRow = { checkins_completed: number; support_requests_responded: number; reviews_completed: number };
 type SharingPreferenceRow = {
   share_checkin_completed: boolean; share_general_status: boolean; share_habit_details: boolean;
   share_craving_level: boolean; share_percentages: boolean; updated_at: string;
@@ -120,15 +125,34 @@ export function createSupabasePrivateRepositories(client: PrivateDataClient): {
 
   const progress: ProgressRepository = {
     async getMine(): Promise<PersonalProgress> {
-      const [ownedHabits, entriesResult] = await Promise.all([
+      const actorId = await requireActorId(client);
+      const [ownedHabits, entriesResult, recoveryResult, supportResult, cooperationResult] = await Promise.all([
         habits.listMine(),
         client.from("daily_entries").select("entry_date,completed_at"),
+        client.from("recovery_event_records").select("trigger,moment,alternative,recorded_at").order("recorded_at", { ascending: true }),
+        client.from("support_requests").select("created_at,acknowledged_at").eq("requester_id", actorId),
+        client.rpc("get_progress_cooperation"),
       ]);
       const entries = unwrap<DailyEntryRow[]>(entriesResult, "Progress is unavailable.");
+      const recoveryRows = unwrap<RecoveryEventRow[]>(recoveryResult, "Progress insights are unavailable.");
+      const supportRows = unwrap<SupportResponseRow[]>(supportResult, "Support metrics are unavailable.");
+      const cooperationRows = unwrap<CooperationRow[]>(cooperationResult, "Cooperation summary is unavailable.");
+      const events: ProgressEventEvidence[] = recoveryRows.map((row) => ({
+        trigger: row.trigger, moment: row.moment, alternative: row.alternative, recordedAt: row.recorded_at,
+      }));
+      const responses: SupportResponseEvidence[] = supportRows.map((row) => ({
+        createdAt: row.created_at, acknowledgedAt: row.acknowledged_at,
+      }));
+      const cooperation: WeeklyCooperation | null = cooperationRows[0] ? {
+        checkinsCompleted: Number(cooperationRows[0].checkins_completed),
+        supportRequestsResponded: Number(cooperationRows[0].support_requests_responded),
+        reviewsCompleted: Number(cooperationRows[0].reviews_completed),
+      } : null;
       return {
         habits: ownedHabits,
         completedEntryCount: entries.filter((entry) => entry.completed_at !== null).length,
         activeDayCount: new Set(entries.map((entry) => entry.entry_date)).size,
+        evidence: { personal: derivePersonalInsights(events, responses), cooperation },
       };
     },
   };
