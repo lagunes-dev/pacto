@@ -19,6 +19,7 @@ const migrationPaths = [
   "supabase/migrations/202607310006_support_request_message_contract.sql",
   "supabase/migrations/202607310007_support_request_contract_hardening.sql",
   "supabase/migrations/202607310008_support_acknowledgement_contract.sql",
+  "supabase/migrations/202607310009_daily_checkin_integer_compatibility.sql",
 ];
 const migrations = migrationPaths.map((path) => readFileSync(`${root}/${path}`, "utf8"));
 const [schema, policies, lifecycle] = migrations;
@@ -33,6 +34,7 @@ const recovery = migrations[10];
 const supportMessageContract = migrations[12];
 const supportContractHardening = migrations[13];
 const supportAcknowledgementContract = migrations[14];
+const dailyCheckinCompatibility = migrations[15];
 const rollbackPath = "supabase/rollback/202607280003_fail_closed_authorization.sql";
 const rollback = readFileSync(`${root}/${rollbackPath}`, "utf8");
 const runtimeTestPaths = [
@@ -118,8 +120,10 @@ const assertions = [
   [dailyCheckin.includes("auth.uid()") && dailyCheckin.includes("America/Mexico_City") && dailyCheckin.includes("pg_timezone_names"), "daily check-in derives actor and validated local day server-side"],
   [dailyCheckin.includes("on conflict (user_id, entry_date) do update") && dailyCheckin.includes("on conflict (daily_entry_id, goal_id) do update"), "daily and habit rows are idempotently upserted in one RPC"],
   [dailyCheckin.includes("revoke all on function public.save_daily_checkin(text, smallint, jsonb) from public, anon, authenticated") && dailyCheckin.includes("grant execute on function public.save_daily_checkin(text, smallint, jsonb) to authenticated"), "daily check-in execution is authenticated-only"],
+  [dailyCheckinCompatibility.includes("create function public.save_daily_checkin(p_timezone text, p_craving_level integer, p_habits jsonb)") && dailyCheckinCompatibility.includes("p_craving_level::smallint") && dailyCheckinCompatibility.includes("security invoker"), "daily check-in integer compatibility delegates to the existing invoker RPC"],
+  [dailyCheckinCompatibility.includes("revoke all on function public.save_daily_checkin(text, integer, jsonb) from public, anon, authenticated") && dailyCheckinCompatibility.includes("grant execute on function public.save_daily_checkin(text, integer, jsonb) to authenticated"), "daily check-in integer compatibility is authenticated-only"],
   [!dailyCheckin.includes("private_notes") && !dailyCheckin.includes("shared_daily_summaries") && !dailyCheckin.includes("support_requests"), "daily check-in RPC cannot write private or shared data"],
-  [runtimeAssertions.includes("foreign owner goal was accepted") && runtimeAssertions.includes("repeat save created more than one owner/local-day row") && runtimeAssertions.includes("daily check-in RPC is not security invoker"), "runtime SQL covers check-in owner isolation, idempotence, and invoker security"],
+  [runtimeAssertions.includes("foreign owner goal was accepted") && runtimeAssertions.includes("repeat save created more than one owner/local-day row") && runtimeAssertions.includes("daily check-in RPC is not security invoker") && runtimeAssertions.includes("text,integer,jsonb"), "runtime SQL covers check-in owner isolation, idempotence, integer compatibility, and invoker security"],
   [recovery.includes("create table if not exists public.recovery_event_records") && recovery.includes("create table if not exists public.weekly_review_records"), "Registro event and weekly record tables are versioned"],
   [recovery.includes("force row level security") && recovery.includes("recovery_events_owner_select") && recovery.includes("weekly_reviews_owner_select"), "Registro records use forced owner-only RLS"],
   [recovery.includes("p_operation_id uuid") && recovery.includes("p_expected_revision integer") && recovery.includes("request_hash") && recovery.includes("Recovery revision conflict"), "recovery RPC enforces idempotency and revision conflicts"],
