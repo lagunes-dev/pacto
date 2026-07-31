@@ -1368,7 +1368,7 @@ h1 {
   z-index: 100;
   inset: 0;
   margin: auto;
-  width: min(560px, calc(100vw - 32px));
+  width: min(560px, calc(100% - 32px));
   max-height: min(720px, calc(100dvh - 32px));
   padding: 0;
   overflow: auto;
@@ -1395,6 +1395,10 @@ h1 {
 
 .modal-head {
   border-bottom: 1px solid var(--color-line);
+}
+
+.modal-head > div {
+  min-width: 0;
 }
 
 .modal-head h2,
