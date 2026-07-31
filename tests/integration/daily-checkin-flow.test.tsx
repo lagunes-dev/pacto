@@ -8,6 +8,7 @@ import { appRoutes } from "../../src/app/router";
 import type { DailyCheckinView, SavedCheckin } from "../../src/features/checkin/model";
 import type { DailyCheckinRepository } from "../../src/features/checkin/repository";
 import { createFixtureServices, createFixtureStore } from "../../src/infrastructure/fixture/services";
+import { createTestOfflineQueue } from "./testOfflineQueue";
 
 type Services = ReturnType<typeof createFixtureServices>;
 
@@ -34,6 +35,7 @@ function renderHome(services: Services, checkinRepository: DailyCheckinRepositor
       progressRepository={services.progress}
       checkinRepository={checkinRepository}
       recoveryRepository={services.recovery}
+      offlineQueue={createTestOfflineQueue()}
     >
       <RouterProvider router={router} />
     </AppProviders>,

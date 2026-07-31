@@ -8,6 +8,7 @@ import { appRoutes } from "../../src/app/router";
 import type { RecoveryRecord } from "../../src/features/recovery/model";
 import type { RecoveryRepository } from "../../src/features/recovery/repository";
 import { createFixtureServices } from "../../src/infrastructure/fixture/services";
+import { createTestOfflineQueue } from "./testOfflineQueue";
 
 type Services = ReturnType<typeof createFixtureServices>;
 
@@ -18,7 +19,7 @@ async function ownerServices() {
 }
 
 function renderPath(path: string, services: Services, recovery: RecoveryRepository = services.recovery) {
-  render(<AppProviders authPort={services.auth} habitRepository={services.habits} progressRepository={services.progress} checkinRepository={services.checkin} recoveryRepository={recovery}><RouterProvider router={createMemoryRouter(appRoutes, { initialEntries: [path] })} /></AppProviders>);
+  render(<AppProviders authPort={services.auth} habitRepository={services.habits} progressRepository={services.progress} checkinRepository={services.checkin} recoveryRepository={recovery} offlineQueue={createTestOfflineQueue()}><RouterProvider router={createMemoryRouter(appRoutes, { initialEntries: [path] })} /></AppProviders>);
 }
 
 async function fillPlan(user: ReturnType<typeof userEvent.setup>) {
