@@ -16,6 +16,7 @@ const migrationPaths = [
   "supabase/migrations/202607300002_daily_checkin_rpc.sql",
   "supabase/migrations/202607310001_demo_parity_complete.sql",
   "supabase/migrations/202607310005_partnership_updated_at_compatibility.sql",
+  "supabase/migrations/202607310006_support_request_message_contract.sql",
 ];
 const migrations = migrationPaths.map((path) => readFileSync(`${root}/${path}`, "utf8"));
 const [schema, policies, lifecycle] = migrations;
@@ -27,6 +28,7 @@ const qualifiedSupport = migrations[7];
 const realtimePush = migrations[8];
 const dailyCheckin = migrations[9];
 const recovery = migrations[10];
+const supportMessageContract = migrations[12];
 const rollbackPath = "supabase/rollback/202607280003_fail_closed_authorization.sql";
 const rollback = readFileSync(`${root}/${rollbackPath}`, "utf8");
 const runtimeTestPaths = [
@@ -92,6 +94,9 @@ const assertions = [
   [schema.includes("updated_at timestamptz not null default now()") && schema.includes("touch_partnership_updated_at") && realtimePush.includes("alter table public.partnerships") && realtimePush.includes("add column if not exists updated_at timestamptz") && realtimePush.includes("coalesce(updated_at, created_at, now())") && realtimePush.includes("alter column updated_at set not null") && realtimePush.includes("drop trigger if exists partnerships_updated_at") && realtimePush.includes("p.updated_at"), "Realtime migration is self-contained for partnership freshness before backfill"],
   [realtimePush.indexOf("add column if not exists updated_at timestamptz") < realtimePush.indexOf("from public.partnerships p"), "Realtime freshness setup precedes the partnership state backfill"],
   [migrations[11].includes("add column if not exists updated_at timestamptz") && migrations[11].includes("coalesce(updated_at, created_at, now())") && migrations[11].includes("drop trigger if exists partnerships_updated_at"), "partnership freshness compatibility migration is forward-safe"],
+  [supportMessageContract.includes("create function public.create_support_request(request_type text, optional_message text)") && supportMessageContract.includes("create function public.create_support_request(request_type text)"), "support creation exposes explicit two-argument and one-argument compatibility signatures"],
+  [supportMessageContract.includes("optional_message text") && supportMessageContract.includes("not_urgent") && supportMessageContract.includes("when_available") && supportMessageContract.includes("no_reply_needed") && !supportMessageContract.includes("private_notes") && !supportMessageContract.includes("food_details"), "support messages are allow-listed and privacy-safe"],
+  [supportMessageContract.includes("private.require_actor()") && supportMessageContract.includes("private.active_partnership_id()") && supportMessageContract.includes("set search_path = ''") && supportMessageContract.includes("grant execute on function public.create_support_request(text, text), public.create_support_request(text) to authenticated"), "support message RPC derives identity server-side and grants only authenticated callers"],
   [realtimePush.includes("supabase_realtime") && realtimePush.includes("partnership_realtime_state") && realtimePush.includes("alter publication supabase_realtime add table"), "Realtime publication registration is conditional and allowlisted"],
   [realtimePush.includes("create table if not exists public.push_subscriptions") && realtimePush.includes("endpoint text not null unique") && realtimePush.includes("p256dh text not null") && realtimePush.includes("auth text not null"), "push subscriptions persist only owner routing material"],
   [realtimePush.includes("protect_push_subscription_owner_trigger") && realtimePush.includes("push subscription owner is immutable"), "push subscription ownership is immutable"],
