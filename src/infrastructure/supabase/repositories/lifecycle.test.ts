@@ -1,7 +1,7 @@
 import { createSupabaseLifecycleRepositories, type LifecycleClient } from "./lifecycle";
 
 type Result = { data: unknown; error: { message?: string } | null };
-type Operation = { boundary: "rpc" | "table"; name: string; action?: string; value?: unknown };
+type Operation = { boundary: "rpc" | "table" | "function"; name: string; action?: string; value?: unknown };
 
 function createClient(results: Record<string, Result[]>, viewerId = "user-a") {
   const operations: Operation[] = [];
@@ -27,6 +27,10 @@ function createClient(results: Record<string, Result[]>, viewerId = "user-a") {
 
   const client = {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: viewerId ? { id: viewerId } : null }, error: null }) },
+    functions: { invoke: vi.fn((name: string, options: { body: Record<string, unknown> }) => {
+      operations.push({ boundary: "function", name, value: options.body });
+      return Promise.resolve(take(`function:${name}`));
+    }) },
     from: vi.fn((table: string) => new Builder(table)),
     rpc: vi.fn((name: string, args?: Record<string, unknown>) => {
       operations.push({ boundary: "rpc", name, value: args });
@@ -135,8 +139,9 @@ describe("Supabase partnership and support repositories", () => {
   });
 
   it("uses support RPC response allow-lists without private notes or automatic alerts", async () => {
+    const requestId = "11111111-1111-4111-8111-111111111111";
     const created = {
-      support_request_id: "request-1",
+      support_request_id: requestId,
       requester_id: "user-a",
       support_type: "food_choice",
       request_message: "not_urgent",
@@ -146,11 +151,14 @@ describe("Supabase partnership and support repositories", () => {
       acknowledged_at: null,
       private_notes: "must not leak",
     };
-    const { client, operations } = createClient({ "rpc:create_support_request": [{ data: [created], error: null }] });
+    const { client, operations } = createClient({
+      "rpc:create_support_request": [{ data: [created], error: null }],
+      "function:send-support-push": [{ data: { providerAccepted: 0, deliveryConfirmed: false }, error: null }],
+    });
     const { support } = createSupabaseLifecycleRepositories(client);
 
     await expect(support.create({ type: "food_choice", message: "not_urgent" })).resolves.toEqual({
-      id: "request-1",
+      id: requestId,
       type: "food_choice",
       status: "pending",
       requestedBy: "me",
@@ -161,6 +169,33 @@ describe("Supabase partnership and support repositories", () => {
     expect(operations.filter((operation) => operation.boundary === "rpc")).toEqual([
       { boundary: "rpc", name: "create_support_request", value: { request_type: "food_choice", optional_message: "not_urgent" } },
     ]);
+    expect(operations.filter((operation) => operation.boundary === "function")).toEqual([
+      { boundary: "function", name: "send-support-push", value: { support_request_id: requestId } },
+    ]);
+    expect(JSON.stringify(operations)).not.toContain("must not leak");
+  });
+
+  it("keeps a confirmed support request when the single best-effort Push dispatch is unavailable", async () => {
+    const requestId = "22222222-2222-4222-8222-222222222222";
+    const created = {
+      support_request_id: requestId,
+      requester_id: "user-a",
+      support_type: "conversation",
+      request_message: null,
+      response_type: null,
+      support_status: "pending",
+      created_at: "2026-07-29T10:00:00Z",
+      acknowledged_at: null,
+      closed_at: null,
+    };
+    const { client, operations } = createClient({
+      "rpc:create_support_request": [{ data: [created], error: null }],
+      "function:send-support-push": [{ data: null, error: { message: "provider unavailable" } }],
+    });
+
+    await expect(createSupabaseLifecycleRepositories(client).support.create({ type: "conversation" }))
+      .resolves.toMatchObject({ id: requestId, status: "pending" });
+    expect(operations.filter((operation) => operation.boundary === "function")).toHaveLength(1);
   });
 
   it("maps complete acknowledge and close RPC responses without private fields", async () => {

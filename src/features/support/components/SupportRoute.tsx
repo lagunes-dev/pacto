@@ -55,7 +55,7 @@ export function SupportRoute() {
 
   return <section className="route-card consent-route" aria-labelledby="support-title">
     <div className="route-heading"><div><p className="eyebrow">Sin vigilancia</p><h1 id="support-title">Apoyo explícito</h1></div><Link className="text-link" to="/partnership">Volver al vínculo</Link></div>
-    <p className="route-lead">Una solicitud aparece solamente cuando alguien la crea. No genera alertas automáticas, mensajes ni notificaciones.</p>
+    <p className="route-lead">Una solicitud aparece solamente cuando alguien la crea. No genera alertas automáticas; al enviarla se intenta una sola notificación privada si la persona destinataria las activó.</p>
     <p className="sr-announcement" role="status" aria-live="polite">{announcement}</p>
     {error && <div ref={errorRef} tabIndex={-1} className="service-alert" role="alert">La solicitud no está disponible.</div>}
     {requests.isPending && <p role="status">Cargando solicitudes…</p>}

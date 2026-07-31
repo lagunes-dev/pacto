@@ -15,6 +15,7 @@ type Query = PromiseLike<Result> & {
 
 export type LifecycleClient = {
   auth: { getUser(): Promise<{ data: { user: { id: string } | null }; error: DatabaseError }> };
+  functions: { invoke(name: string, options: { body: Record<string, unknown> }): Promise<Result> };
   from(table: string): Query;
   rpc(name: string, args?: Record<string, unknown>): Promise<Result>;
 };
@@ -188,7 +189,13 @@ export function createSupabaseLifecycleRepositories(client: LifecycleClient): {
         await client.rpc("create_support_request", { request_type: safe.type, optional_message: safe.message ?? null }),
         "Support request creation failed.",
       );
-      return mapSupport(row, viewerId, "me");
+      const request = mapSupport(row, viewerId, "me");
+      try {
+        await client.functions.invoke("send-support-push", { body: { support_request_id: request.id } });
+      } catch {
+        // The persisted request remains authoritative; Push is a single best-effort dispatch.
+      }
+      return request;
     },
     async acknowledge(id, response) {
       const viewerId = await actorId(client);

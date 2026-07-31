@@ -34,7 +34,7 @@ describe("recovery replay queue", () => {
     expect(await queue.list("actor-a")).toEqual([record]);
   });
 
-  it.each(["check-in", "review", "support", "partnership", "private-note"])('rejects the forbidden "%s" kind without writing', async (kind) => {
+  it.each(["check-in", "review", "support", "partnership", "push", "private-note"])('rejects the forbidden "%s" kind without writing', async (kind) => {
     const queue = await activeQueue();
     await expect(queue.enqueue("actor-a", { kind, payload: {} } as never)).rejects.toThrow("not supported");
     expect(await queue.list("actor-a")).toEqual([]);

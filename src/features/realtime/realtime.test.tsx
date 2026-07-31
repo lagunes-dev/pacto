@@ -134,7 +134,7 @@ describe("Supabase realtime filters", () => {
 });
 
 describe("mounted realtime coordinator", () => {
-  it("cleans up when partnership status becomes inactive and on sign-out", async () => {
+  it("cleans up on partnership pause, end, and sign-out", async () => {
     const mock = createMockPort();
     let status: PartnershipView["status"] = "active";
     const session = { user: { id: "actor-a", email: "a@example.com" } };
@@ -157,7 +157,8 @@ describe("mounted realtime coordinator", () => {
     function Probe() {
       const client = useQueryClient();
       const auth = useAuth();
-      return <><button onClick={() => { status = "paused"; void client.invalidateQueries({ queryKey: partnershipKeys.mine(session.user.id) }); }}>pause</button><button onClick={() => void client.invalidateQueries({ queryKey: partnershipKeys.mine(session.user.id) })}>refresh</button><button onClick={() => void auth.logout()}>sign out</button></>;
+      const changeStatus = (next: PartnershipView["status"]) => { status = next; void client.invalidateQueries({ queryKey: partnershipKeys.mine(session.user.id) }); };
+      return <><button onClick={() => changeStatus("paused")}>pause</button><button onClick={() => changeStatus("ended")}>end</button><button onClick={() => changeStatus("active")}>activate</button><button onClick={() => void auth.logout()}>sign out</button></>;
     }
 
     const user = userEvent.setup();
@@ -166,11 +167,14 @@ describe("mounted realtime coordinator", () => {
     await waitFor(() => expect(mock.subscriptions).toHaveLength(1));
     await user.click(screen.getByRole("button", { name: "pause" }));
     await waitFor(() => expect(mock.cleanups[0]).toHaveBeenCalledOnce());
-    status = "active";
-    await user.click(screen.getByRole("button", { name: "refresh" }));
+    await user.click(screen.getByRole("button", { name: "activate" }));
     await waitFor(() => expect(mock.subscriptions).toHaveLength(2));
+    await user.click(screen.getByRole("button", { name: "end" }));
+    await waitFor(() => expect(mock.cleanups[1]).toHaveBeenCalledOnce());
+    await user.click(screen.getByRole("button", { name: "activate" }));
+    await waitFor(() => expect(mock.subscriptions).toHaveLength(3));
     await user.click(screen.getByRole("button", { name: "sign out" }));
     await waitFor(() => expect(authPort.logout).toHaveBeenCalledOnce());
-    await waitFor(() => expect(mock.cleanups[1]).toHaveBeenCalledOnce());
+    await waitFor(() => expect(mock.cleanups[2]).toHaveBeenCalledOnce());
   });
 });
