@@ -11,6 +11,18 @@ on conflict (id) do nothing;
 
 do $$
 begin
+  if not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'support_requests' and column_name = 'request_message')
+     or not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'support_requests' and column_name = 'response_type') then
+    raise exception 'support request message columns are missing';
+  end if;
+  if not exists (select 1 from pg_constraint where conrelid = 'public.support_requests'::regclass and conname = 'support_requests_request_message_length')
+     or not exists (select 1 from pg_constraint where conrelid = 'public.support_requests'::regclass and conname = 'support_requests_response_type_allowlist') then
+    raise exception 'support request message constraints are missing';
+  end if;
+end $$;
+
+do $$
+begin
   if has_function_privilege('authenticated', 'private.require_actor()', 'execute')
      or has_function_privilege('authenticated', 'private.active_partnership_id()', 'execute') then
     raise exception 'authenticated can execute private lifecycle helpers';

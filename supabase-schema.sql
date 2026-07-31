@@ -106,6 +106,8 @@ create table public.support_requests (
   requester_id uuid not null references public.profiles(id) on delete cascade,
   partnership_id uuid not null references public.partnerships(id) on delete cascade,
   support_type text not null,
+  request_message text check (request_message is null or char_length(request_message) between 1 and 160),
+  response_type text check (response_type is null or response_type in ('available_now', 'available_later', 'here_with_you')),
   status public.support_status not null default 'pending',
   created_at timestamptz not null default now(),
   acknowledged_at timestamptz

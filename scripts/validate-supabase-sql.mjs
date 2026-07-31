@@ -17,6 +17,7 @@ const migrationPaths = [
   "supabase/migrations/202607310001_demo_parity_complete.sql",
   "supabase/migrations/202607310005_partnership_updated_at_compatibility.sql",
   "supabase/migrations/202607310006_support_request_message_contract.sql",
+  "supabase/migrations/202607310007_support_request_contract_hardening.sql",
 ];
 const migrations = migrationPaths.map((path) => readFileSync(`${root}/${path}`, "utf8"));
 const [schema, policies, lifecycle] = migrations;
@@ -29,6 +30,7 @@ const realtimePush = migrations[8];
 const dailyCheckin = migrations[9];
 const recovery = migrations[10];
 const supportMessageContract = migrations[12];
+const supportContractHardening = migrations[13];
 const rollbackPath = "supabase/rollback/202607280003_fail_closed_authorization.sql";
 const rollback = readFileSync(`${root}/${rollbackPath}`, "utf8");
 const runtimeTestPaths = [
@@ -97,6 +99,9 @@ const assertions = [
   [supportMessageContract.includes("create function public.create_support_request(request_type text, optional_message text)") && supportMessageContract.includes("create function public.create_support_request(request_type text)"), "support creation exposes explicit two-argument and one-argument compatibility signatures"],
   [supportMessageContract.includes("optional_message text") && supportMessageContract.includes("not_urgent") && supportMessageContract.includes("when_available") && supportMessageContract.includes("no_reply_needed") && !supportMessageContract.includes("private_notes") && !supportMessageContract.includes("food_details"), "support messages are allow-listed and privacy-safe"],
   [supportMessageContract.includes("private.require_actor()") && supportMessageContract.includes("private.active_partnership_id()") && supportMessageContract.includes("set search_path = ''") && supportMessageContract.includes("grant execute on function public.create_support_request(text, text), public.create_support_request(text) to authenticated"), "support message RPC derives identity server-side and grants only authenticated callers"],
+  [supportMessageContract.includes("add column if not exists request_message text") && supportMessageContract.includes("add column if not exists response_type text"), "support message RPC migration creates its referenced columns before recreation"],
+  [supportContractHardening.includes("request_message_length") && supportContractHardening.includes("char_length(request_message) between 1 and 160") && supportContractHardening.includes("response_type_allowlist") && supportContractHardening.includes("response_type is null or response_type in ('available_now', 'available_later', 'here_with_you')"), "support contract columns are nullable and constrained"],
+  [supportContractHardening.includes("create index if not exists support_requests_partnership_idx") && policies.includes("support_active_members_select") && policies.includes("p.status = 'active'"), "support hardening preserves indexed active-partnership access"],
   [realtimePush.includes("supabase_realtime") && realtimePush.includes("partnership_realtime_state") && realtimePush.includes("alter publication supabase_realtime add table"), "Realtime publication registration is conditional and allowlisted"],
   [realtimePush.includes("create table if not exists public.push_subscriptions") && realtimePush.includes("endpoint text not null unique") && realtimePush.includes("p256dh text not null") && realtimePush.includes("auth text not null"), "push subscriptions persist only owner routing material"],
   [realtimePush.includes("protect_push_subscription_owner_trigger") && realtimePush.includes("push subscription owner is immutable"), "push subscription ownership is immutable"],
