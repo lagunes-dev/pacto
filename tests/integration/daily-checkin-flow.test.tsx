@@ -53,6 +53,38 @@ afterEach(() => {
 });
 
 describe("daily check-in flow", () => {
+  it("opens one intervention for a high-craving episode and never for levels 1 to 3", async () => {
+    const user = userEvent.setup();
+    const { services } = await ownerServices();
+    renderHome(services);
+    await screen.findByRole("heading", { name: "¿Cómo va tu día?" });
+
+    await user.click(screen.getByRole("button", { name: "Antojo 3 de 5" }));
+    expect(screen.queryByRole("dialog", { name: "El antojo está alto" })).not.toBeInTheDocument();
+
+    const highTrigger = screen.getByRole("button", { name: "Antojo 4 de 5" });
+    await user.click(highTrigger);
+    expect(screen.getByRole("dialog", { name: "El antojo está alto" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ahora no" }));
+    expect(highTrigger).toHaveFocus();
+
+    await user.click(screen.getByRole("button", { name: "Antojo 5 de 5" }));
+    expect(screen.queryByRole("dialog", { name: "El antojo está alto" })).not.toBeInTheDocument();
+  });
+
+  it("does not claim that selecting an intervention action saved the check-in", async () => {
+    const user = userEvent.setup();
+    const { services } = await ownerServices();
+    renderHome(services);
+    await screen.findByRole("heading", { name: "¿Cómo va tu día?" });
+
+    await user.click(screen.getByRole("button", { name: "Antojo 4 de 5" }));
+    await user.click(screen.getByRole("button", { name: /Elegir una alternativa/ }));
+    await user.click(screen.getByRole("button", { name: "Usar esta acción" }));
+
+    expect(screen.getByRole("status")).toHaveTextContent("Esta elección no se guardó ni se compartió automáticamente.");
+    expect(screen.queryByText(/Check-in guardado/)).not.toBeInTheDocument();
+  });
   it("shows loading and then the empty active-goal state", async () => {
     const { services } = await ownerServices(false);
     const loading = deferred<DailyCheckinView>();

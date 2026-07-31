@@ -7,6 +7,7 @@ import {
   type HabitAnswer,
 } from "../model";
 import { useDailyCheckin } from "../queries";
+import { CravingInterventionModal } from "./CravingInterventionModal";
 
 type DraftAnswer = {
   state: "unset" | "done" | "event";
@@ -47,7 +48,10 @@ export function DailyCheckinCard() {
   const [craving, setCraving] = useState<CravingLevel | null>(null);
   const [validation, setValidation] = useState<string | null>(null);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const [interventionOpen, setInterventionOpen] = useState(false);
+  const [interventionMessage, setInterventionMessage] = useState<string | null>(null);
   const validationRef = useRef<HTMLDivElement>(null);
+  const cravingTriggerRef = useRef<HTMLButtonElement>(null);
   const online = useOnlineStatus();
 
   useEffect(() => {
@@ -214,7 +218,16 @@ export function DailyCheckinCard() {
               className={craving === level ? "is-selected" : ""}
               aria-label={`Antojo ${level} de 5`}
               aria-pressed={craving === level}
-              onClick={() => { setCraving(level); setValidation(null); setSavedMessage(null); }}
+              onClick={(event) => {
+                const wasHigh = craving !== null && craving >= 4;
+                setCraving(level);
+                setValidation(null);
+                setSavedMessage(null);
+                if (level >= 4 && !wasHigh) {
+                  cravingTriggerRef.current = event.currentTarget;
+                  setInterventionOpen(true);
+                }
+              }}
             >{level}</button>
           ))}
         </div>
@@ -244,6 +257,18 @@ export function DailyCheckinCard() {
         {save.isPending ? "Guardando…" : save.isError ? "Reintentar guardar" : "Guardar check-in"}
       </button>
       <p className="checkin-privacy">Solo se guarda este check-in cuando el servicio confirma la respuesta. No se comparte automáticamente.</p>
+      <CravingInterventionModal
+        open={interventionOpen}
+        onOpenChange={setInterventionOpen}
+        triggerRef={cravingTriggerRef}
+        onActionSelected={(action) => setInterventionMessage(`${action}. Esta elección no se guardó ni se compartió automáticamente.`)}
+      />
+      {interventionMessage && (
+        <div className="toast intervention-toast show" role="status" aria-live="polite">
+          <strong>Acción elegida</strong>
+          <span>{interventionMessage}</span>
+        </div>
+      )}
     </article>
   );
 }
