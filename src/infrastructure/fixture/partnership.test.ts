@@ -85,27 +85,27 @@ describe("two-user partnership fixture", () => {
   it("allows only the other active member to acknowledge and close support", async () => {
     const { a, b } = setup();
     await activate(a, b);
-    const request = await a.support.create("check_in");
-    await expect(a.support.acknowledge(request.id)).rejects.toThrow("unavailable");
-    expect((await b.support.acknowledge(request.id)).status).toBe("acknowledged");
+    const request = await a.support.create({ type: "conversation" });
+    await expect(a.support.acknowledge(request.id, "available_now")).rejects.toThrow("unavailable");
+    expect((await b.support.acknowledge(request.id, "available_now")).status).toBe("acknowledged");
     expect((await b.support.close(request.id)).status).toBe("closed");
-    expect(() => createSupportRequestSchema.parse({ type: "check_in", privateNote: "secret", ownerId: userA.id })).toThrow();
+    expect(() => createSupportRequestSchema.parse({ type: "conversation", privateNote: "secret", ownerId: userA.id })).toThrow();
   });
 
   it("revokes support immediately on pause and after termination", async () => {
     const { a, b } = setup();
     await activate(a, b);
-    const pendingRequest = await a.support.create("encouragement");
-    const acknowledgedRequest = await a.support.create("practical_help");
-    await b.support.acknowledge(acknowledgedRequest.id);
+    const pendingRequest = await a.support.create({ type: "motivation" });
+    const acknowledgedRequest = await a.support.create({ type: "food_choice" });
+    await b.support.acknowledge(acknowledgedRequest.id, "here_with_you");
     expect((await b.partnership.pause()).status).toBe("paused");
     await expect(a.support.list()).rejects.toThrow("Active partnership required");
-    await expect(b.support.create("practical_help")).rejects.toThrow("Active partnership required");
+    await expect(b.support.create({ type: "food_choice" })).rejects.toThrow("Active partnership required");
     expect((await a.partnership.end()).status).toBe("ended");
     await expect(b.partnership.pause()).rejects.toThrow("Invalid partnership transition");
     await expect(a.support.list()).rejects.toThrow("Active partnership required");
-    await expect(b.support.create("check_in")).rejects.toThrow("Active partnership required");
-    await expect(b.support.acknowledge(pendingRequest.id)).rejects.toThrow("Active partnership required");
+    await expect(b.support.create({ type: "conversation" })).rejects.toThrow("Active partnership required");
+    await expect(b.support.acknowledge(pendingRequest.id, "available_later")).rejects.toThrow("Active partnership required");
     await expect(b.support.close(acknowledgedRequest.id)).rejects.toThrow("Active partnership required");
   });
 
@@ -113,7 +113,7 @@ describe("two-user partnership fixture", () => {
     const { a, b } = setup();
     await activate(a, b);
     const preference = await a.preferences.getMine();
-    const request = await a.support.create("encouragement");
+    const request = await a.support.create({ type: "motivation" });
     const payload = JSON.stringify({ partnership: await b.partnership.getMine(), preference, request });
     expect(payload).not.toMatch(/email|ownerId|privateNote|notes|metadata|a@example\.com|b@example\.com/);
     expect(Object.keys(preference)).toEqual(expect.arrayContaining(["shareCheckinCompleted", "shareGeneralStatus", "shareHabitDetails", "shareCravingLevel", "sharePercentages", "noThreats", "askBeforeAdvice", "noComparisons", "pauseAllowed", "preferredSupport", "timezone", "updatedAt"]));

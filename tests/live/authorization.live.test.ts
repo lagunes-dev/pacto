@@ -131,10 +131,10 @@ describe.sequential("credential-gated hosted authorization and adapter paths", (
     expect((await b.partnership.getMine())?.partner.userId).toBe(actors.userA.userId);
     expect(await intruder.partnership.getMine()).toBeNull();
 
-    const request = await a.support.create("check_in");
+    const request = await a.support.create({ type: "conversation" });
     expect((await b.support.list()).some((row) => row.id === request.id)).toBe(true);
     expect(await intruder.support.list()).toEqual([]);
-    expect((await b.support.acknowledge(request.id)).status).toBe("acknowledged");
+    expect((await b.support.acknowledge(request.id, "available_now")).status).toBe("acknowledged");
     expect((await b.support.close(request.id)).status).toBe("closed");
 
     const directMutation = await rawFrom(actors.userB, "partnerships")
@@ -147,19 +147,19 @@ describe.sequential("credential-gated hosted authorization and adapter paths", (
   it("revokes partnership/support access immediately on pause and permanently on end", async () => {
     const a = await ensureActivePartnership();
     const b = createSupabaseLifecycleRepositories(actors.userB.raw);
-    const pendingAtRevocation = await a.support.create("encouragement");
+    const pendingAtRevocation = await a.support.create({ type: "motivation" });
 
     expect((await a.partnership.pause()).status).toBe("paused");
     expect(await a.support.list()).toEqual([]);
     expect(await b.support.list()).toEqual([]);
-    await expectRejected(() => b.support.create("practical_help"));
+    await expectRejected(() => b.support.create({ type: "food_choice" }));
     await expectHidden(actors.userB, "support_requests", pendingAtRevocation.id);
     expect((await b.partnership.getMine())?.partner.userId).toBe("");
 
     expect((await b.partnership.end()).status).toBe("ended");
     expect(await a.support.list()).toEqual([]);
     expect(await b.support.list()).toEqual([]);
-    await expectRejected(() => a.support.create("check_in"));
+    await expectRejected(() => a.support.create({ type: "conversation" }));
     await expectRejected(() => a.partnership.pause());
     expect((await a.partnership.getMine())?.partner.userId).toBe("");
   });

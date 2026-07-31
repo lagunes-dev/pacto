@@ -1,8 +1,8 @@
-import type { SupportRequestView, SupportType } from "./model";
+import type { CreateSupportRequest, SupportRequestView, SupportResponse } from "./model";
 
 export interface SupportRepository {
   list(): Promise<SupportRequestView[]>;
-  create(type: SupportType): Promise<SupportRequestView>;
-  acknowledge(id: string): Promise<SupportRequestView>;
+  create(input: CreateSupportRequest): Promise<SupportRequestView>;
+  acknowledge(id: string, response: SupportResponse): Promise<SupportRequestView>;
   close(id: string): Promise<SupportRequestView>;
 }

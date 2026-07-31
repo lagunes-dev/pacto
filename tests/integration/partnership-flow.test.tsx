@@ -142,18 +142,28 @@ describe("partnership routes", () => {
     expect(await screen.findByText("El apoyo está habilitado solamente mediante acciones explícitas.")).toBeInTheDocument();
   });
 
-  it("supports explicit request, acknowledge, and close without automatic alerts", async () => {
+  it("sends only an explicitly selected support choice and allow-listed optional message", async () => {
     const user = userEvent.setup();
     const { first, second } = await activeUsers();
     renderRoute(first, "/partnership/support");
     expect(await screen.findByText(/No genera alertas automáticas/)).toBeInTheDocument();
-    await user.selectOptions(await screen.findByLabelText("Tipo de apoyo"), "practical_help");
-    await user.click(screen.getByRole("button", { name: "Solicitar apoyo" }));
+    await user.click(await screen.findByRole("button", { name: "Crear solicitud" }));
+    expect(screen.getAllByRole("radio")).toHaveLength(5);
+    for (const label of ["Distráeme unos minutos", "Ayúdame a elegir qué comer", "Recuérdame mi motivo", "Háblame cuando puedas", "Solo acompáñame, sin consejos"]) {
+      expect(screen.getByRole("radio", { name: new RegExp(label) })).toBeInTheDocument();
+    }
+    await user.click(screen.getByRole("radio", { name: /Ayúdame a elegir qué comer/ }));
+    await user.selectOptions(screen.getByLabelText("Mensaje opcional"), "not_urgent");
+    await user.click(screen.getByRole("button", { name: "Enviar solicitud" }));
+    expect(await screen.findByText(/Solicitud enviada\. Tu pareja verá/)).toBeInTheDocument();
+    expect(screen.queryByText(/detalle|nota privada/i)).not.toBeInTheDocument();
     expect(await screen.findByText("Solicitada por ti · pending")).toBeInTheDocument();
 
     cleanup();
     renderRoute(second, "/partnership/support");
-    await user.click(await screen.findByRole("button", { name: "Reconocer" }));
+    await user.selectOptions(await screen.findByLabelText("Respuesta para Ayúdame a elegir qué comer"), "available_later");
+    await user.click(screen.getByRole("button", { name: "Responder" }));
+    expect(await screen.findByText("Puedo acompañarte más tarde.")).toBeInTheDocument();
     await user.click(await screen.findByRole("button", { name: "Cerrar" }));
     expect(await screen.findByText("Solicitada por tu vínculo · closed")).toBeInTheDocument();
   });

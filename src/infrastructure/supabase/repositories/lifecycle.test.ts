@@ -91,7 +91,9 @@ describe("Supabase partnership and support repositories", () => {
     const row = {
       id: "request-1",
       requester_id: "user-b",
-      support_type: "check_in",
+      support_type: "conversation",
+      request_message: null,
+      response_type: null,
       status: "pending",
       created_at: "2026-07-29T10:00:00Z",
       acknowledged_at: null,
@@ -102,14 +104,14 @@ describe("Supabase partnership and support repositories", () => {
 
     await expect(support.list()).resolves.toEqual([{
       id: "request-1",
-      type: "check_in",
+      type: "conversation",
       status: "pending",
       requestedBy: "partner",
       createdAt: row.created_at,
       updatedAt: row.created_at,
     }]);
     expect(operations.find((operation) => operation.action === "select")?.value)
-      .toBe("id,requester_id,support_type,status,created_at,acknowledged_at,closed_at");
+      .toBe("id,requester_id,support_type,request_message,response_type,status,created_at,acknowledged_at,closed_at");
   });
 
   it("treats an RLS-empty support read as immediate revocation and never creates alerts", async () => {
@@ -127,16 +129,18 @@ describe("Supabase partnership and support repositories", () => {
     });
     const { support } = createSupabaseLifecycleRepositories(client);
 
-    await expect(support.create("notes" as never)).rejects.toThrow();
+    await expect(support.create({ type: "notes" } as never)).rejects.toThrow();
     expect(operations).toEqual([]);
-    await expect(support.create("encouragement")).rejects.toThrow("active partnership required");
+    await expect(support.create({ type: "motivation" })).rejects.toThrow("active partnership required");
   });
 
   it("uses support RPC response allow-lists without private notes or automatic alerts", async () => {
     const created = {
       support_request_id: "request-1",
       requester_id: "user-a",
-      support_type: "practical_help",
+      support_type: "food_choice",
+      request_message: "not_urgent",
+      response_type: null,
       support_status: "pending",
       created_at: "2026-07-29T10:00:00Z",
       acknowledged_at: null,
@@ -145,16 +149,17 @@ describe("Supabase partnership and support repositories", () => {
     const { client, operations } = createClient({ "rpc:create_support_request": [{ data: [created], error: null }] });
     const { support } = createSupabaseLifecycleRepositories(client);
 
-    await expect(support.create("practical_help")).resolves.toEqual({
+    await expect(support.create({ type: "food_choice", message: "not_urgent" })).resolves.toEqual({
       id: "request-1",
-      type: "practical_help",
+      type: "food_choice",
       status: "pending",
       requestedBy: "me",
+      message: "not_urgent",
       createdAt: created.created_at,
       updatedAt: created.created_at,
     });
     expect(operations.filter((operation) => operation.boundary === "rpc")).toEqual([
-      { boundary: "rpc", name: "create_support_request", value: { request_type: "practical_help" } },
+      { boundary: "rpc", name: "create_support_request", value: { request_type: "food_choice", optional_message: "not_urgent" } },
     ]);
   });
 
@@ -162,7 +167,9 @@ describe("Supabase partnership and support repositories", () => {
     const acknowledged = {
       support_request_id: "request-1",
       requester_id: "user-a",
-      support_type: "check_in",
+      support_type: "conversation",
+      request_message: null,
+      response_type: "available_now",
       support_status: "acknowledged",
       created_at: "2026-07-29T10:00:00Z",
       acknowledged_at: "2026-07-29T10:05:00Z",
@@ -175,24 +182,26 @@ describe("Supabase partnership and support repositories", () => {
     });
     const { support } = createSupabaseLifecycleRepositories(client);
 
-    await expect(support.acknowledge("request-1")).resolves.toEqual({
+    await expect(support.acknowledge("request-1", "available_now")).resolves.toEqual({
       id: "request-1",
-      type: "check_in",
+      type: "conversation",
       status: "acknowledged",
       requestedBy: "partner",
+      response: "available_now",
       createdAt: acknowledged.created_at,
       updatedAt: acknowledged.acknowledged_at,
     });
     await expect(support.close("request-1")).resolves.toEqual({
       id: "request-1",
-      type: "check_in",
+      type: "conversation",
       status: "closed",
       requestedBy: "partner",
+      response: "available_now",
       createdAt: closed.created_at,
       updatedAt: closed.acknowledged_at,
     });
     expect(operations.filter((operation) => operation.boundary === "rpc")).toEqual([
-      { boundary: "rpc", name: "acknowledge_support_request", value: { request_id: "request-1" } },
+      { boundary: "rpc", name: "acknowledge_support_request", value: { request_id: "request-1", selected_response: "available_now" } },
       { boundary: "rpc", name: "close_support_request", value: { request_id: "request-1" } },
     ]);
   });
@@ -206,18 +215,18 @@ describe("Supabase partnership and support repositories", () => {
     });
     const { support } = createSupabaseLifecycleRepositories(client);
 
-    await expect(support.acknowledge("request-1")).rejects.toThrow("Support request response was incomplete");
+    await expect(support.acknowledge("request-1", "available_now")).rejects.toThrow("Support request response was incomplete");
   });
 
   it("rejects an incomplete support creation response", async () => {
     const { client } = createClient({
       "rpc:create_support_request": [{
-        data: [{ support_request_id: "request-1", support_type: "check_in", support_status: "pending" }],
+        data: [{ support_request_id: "request-1", support_type: "conversation", support_status: "pending" }],
         error: null,
       }],
     });
     const { support } = createSupabaseLifecycleRepositories(client);
 
-    await expect(support.create("check_in")).rejects.toThrow("Support request response was incomplete");
+    await expect(support.create({ type: "conversation" })).rejects.toThrow("Support request response was incomplete");
   });
 });

@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 
-import { supportTypes, type SupportType } from "../model";
-import { useAcknowledgeSupportRequest, useCloseSupportRequest, useCreateSupportRequest, useSupportRequests } from "../queries";
+import { supportResponses, type SupportResponse } from "../model";
+import { useAcknowledgeSupportRequest, useCloseSupportRequest, useSupportRequests } from "../queries";
 import type { PushStatus, PushSubscriptionPort } from "../../push/port";
 import { useRepositories } from "../../../app/providers";
 
-const labels: Record<SupportType, string> = { encouragement: "Aliento", check_in: "Conversar", practical_help: "Ayuda práctica" };
+import { messageLabels, SupportDialog, supportLabels } from "./SupportDialog";
+
+const responseLabels: Record<SupportResponse, string> = { available_now: "Estoy disponible ahora.", available_later: "Puedo acompañarte más tarde.", here_with_you: "Estoy aquí contigo." };
 
 const pushMessages: Record<PushStatus, string> = {
   unsupported: "Este navegador no admite notificaciones.",
@@ -43,14 +45,13 @@ export function PushSubscriptionControls({ port }: { port: PushSubscriptionPort 
 export function SupportRoute() {
   const { push } = useRepositories();
   const requests = useSupportRequests();
-  const create = useCreateSupportRequest();
   const acknowledge = useAcknowledgeSupportRequest();
   const close = useCloseSupportRequest();
   const [announcement, setAnnouncement] = useState("");
   const errorRef = useRef<HTMLDivElement>(null);
-  const error = requests.error || create.error || acknowledge.error || close.error;
+  const error = requests.error || acknowledge.error || close.error;
   useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
-  const busy = create.isPending || acknowledge.isPending || close.isPending;
+  const busy = acknowledge.isPending || close.isPending;
 
   return <section className="route-card consent-route" aria-labelledby="support-title">
     <div className="route-heading"><div><p className="eyebrow">Sin vigilancia</p><h1 id="support-title">Apoyo explícito</h1></div><Link className="text-link" to="/partnership">Volver al vínculo</Link></div>
@@ -59,9 +60,6 @@ export function SupportRoute() {
     {error && <div ref={errorRef} tabIndex={-1} className="service-alert" role="alert">La solicitud no está disponible.</div>}
     {requests.isPending && <p role="status">Cargando solicitudes…</p>}
     <PushSubscriptionControls port={push} />
-    {requests.data && <><form className="consent-form" onSubmit={(event) => { event.preventDefault(); const type = new FormData(event.currentTarget).get("type") as SupportType; create.mutate(type, { onSuccess: () => setAnnouncement("Solicitud de apoyo creada.") }); }}>
-      <label htmlFor="support-type">Tipo de apoyo</label><select id="support-type" name="type">{supportTypes.map((type) => <option key={type} value={type}>{labels[type]}</option>)}</select>
-      <button className="primary-button" disabled={busy} type="submit">Solicitar apoyo</button>
-    </form><ul className="support-list">{requests.data.map((request) => <li key={request.id}><div><strong>{labels[request.type]}</strong><span>{request.requestedBy === "me" ? "Solicitada por ti" : "Solicitada por tu vínculo"} · {request.status}</span></div>{request.requestedBy === "partner" && request.status === "pending" && <button className="text-button" disabled={busy} onClick={() => acknowledge.mutate(request.id, { onSuccess: () => setAnnouncement("Solicitud reconocida.") })}>Reconocer</button>}{request.requestedBy === "partner" && request.status === "acknowledged" && <button className="text-button" disabled={busy} onClick={() => close.mutate(request.id, { onSuccess: () => setAnnouncement("Solicitud cerrada.") })}>Cerrar</button>}</li>)}</ul></>}
+    {requests.data && <><div className="consent-form"><SupportDialog onSent={() => setAnnouncement("Solicitud enviada. Tu pareja verá sólo la opción elegida.")} /></div><ul className="support-list">{requests.data.map((request) => <li key={request.id}><div><strong>{supportLabels[request.type].title}</strong><span>{request.requestedBy === "me" ? "Solicitada por ti" : "Solicitada por tu vínculo"} · {request.status}</span>{request.message && <small>{messageLabels[request.message]}</small>}{request.response && <small>{responseLabels[request.response]}</small>}</div>{request.requestedBy === "partner" && request.status === "pending" && <form onSubmit={(event) => { event.preventDefault(); const response = new FormData(event.currentTarget).get("response") as SupportResponse; acknowledge.mutate({ id: request.id, response }, { onSuccess: () => setAnnouncement("Respuesta enviada.") }); }}><label htmlFor={`response-${request.id}`}>Respuesta para {supportLabels[request.type].title}</label><select id={`response-${request.id}`} name="response">{supportResponses.map((response) => <option key={response} value={response}>{responseLabels[response]}</option>)}</select><button className="text-button" disabled={busy} type="submit">Responder</button></form>}{request.requestedBy === "partner" && request.status === "acknowledged" && <button className="text-button" disabled={busy} onClick={() => close.mutate(request.id, { onSuccess: () => setAnnouncement("Solicitud cerrada.") })}>Cerrar</button>}</li>)}</ul></>}
   </section>;
 }

@@ -4,6 +4,7 @@ import { SessionActions } from "../../auth/components/AuthRoute";
 import { DailyCheckinCard } from "../../checkin/components/DailyCheckinCard";
 import { usePersonalProgress } from "../../progress/queries";
 import { useRecoveryTimeline } from "../../recovery/queries";
+import { SupportDialog } from "../../support/components/SupportDialog";
 
 function message(error: unknown) {
   return error instanceof Error ? error.message : "No pudimos consultar el servicio.";
@@ -54,7 +55,8 @@ export function HomeRoute() {
           <article className="home-panel">
             <p className="eyebrow">Apoyo</p>
             <h2>Elige qué necesitas</h2>
-            <p>Las solicitudes de apoyo desde Inicio estarán disponibles más adelante. No se envió ninguna solicitud.</p>
+            <p>Elige exactamente qué necesitas. No se comparten notas privadas ni detalles del registro.</p>
+            <SupportDialog buttonLabel="Pedir el apoyo correcto" />
           </article>
           <article className="home-panel">
             <p className="eyebrow">Acompañamiento</p>

@@ -78,7 +78,7 @@ describe("canonical parity shell", () => {
     expect(screen.getByRole("heading", { name: "Elige qué necesitas" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Sin estado de pareja mostrado" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Aún no configurada" })).toBeInTheDocument();
-    expect(screen.getByText(/No se envió ninguna solicitud\./)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pedir el apoyo correcto" })).toBeInTheDocument();
     expect(screen.queryByText(/PACTO-/)).not.toBeInTheDocument();
   });
 

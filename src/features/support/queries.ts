@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useRepositories } from "../../app/providers";
 import { useAuth } from "../auth/queries/AuthProvider";
-import type { SupportType } from "./model";
+import type { CreateSupportRequest, SupportResponse } from "./model";
 
 export const supportKeys = {
   all: (actorId: string) => ["support", actorId] as const,
@@ -32,12 +32,12 @@ function useSupportMutation<T>(action: string, mutationFn: (value: T) => Promise
 
 export function useCreateSupportRequest() {
   const { support } = useRepositories();
-  return useSupportMutation<SupportType>("create", (type) => support.create(type));
+  return useSupportMutation<CreateSupportRequest>("create", (input) => support.create(input));
 }
 
 export function useAcknowledgeSupportRequest() {
   const { support } = useRepositories();
-  return useSupportMutation<string>("acknowledge", (id) => support.acknowledge(id));
+  return useSupportMutation<{ id: string; response: SupportResponse }>("acknowledge", ({ id, response }) => support.acknowledge(id, response));
 }
 
 export function useCloseSupportRequest() {

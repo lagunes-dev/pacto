@@ -53,7 +53,7 @@ describe("development fixture privacy contracts", () => {
 
     const invite = await a.partnership.createInvite(ownerB.email);
     await b.partnership.acceptInvite(invite.code);
-    const request = await a.support.create("check_in");
+    const request = await a.support.create({ type: "conversation" });
 
     expect(await b.support.list()).toEqual([{ ...request, requestedBy: "partner" }]);
     expect(JSON.stringify(await a.partnership.getMine())).not.toMatch(/notes|habits|summary|email/i);

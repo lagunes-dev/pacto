@@ -124,11 +124,23 @@ do $$ begin
   ) then raise exception 'partnership lifecycle identity changed'; end if;
 end $$;
 
--- Support create, acknowledge, and close require the other active member.
+-- Every exact support choice creates one pending request and nothing else is accepted.
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '11000000-0000-0000-0000-000000000001', true);
-select * from public.create_support_request(' check-in ');
+select * from public.create_support_request('distraction', 'not_urgent');
+select * from public.create_support_request('food_choice', null);
+select * from public.create_support_request('motivation', 'when_available');
+select * from public.create_support_request('conversation', null);
+select * from public.create_support_request('presence_no_advice', 'no_reply_needed');
 reset role;
+do $$ begin
+  if (select count(*) from public.support_requests r
+      where r.requester_id = '11000000-0000-0000-0000-000000000001'
+        and r.status = 'pending'
+        and r.support_type in ('distraction', 'food_choice', 'motivation', 'conversation', 'presence_no_advice')) <> 5 then
+    raise exception 'exact support choices did not each create one pending request';
+  end if;
+end $$;
 select set_config('pacto.test.support_id', (
   select r.id::text from public.support_requests r
   where r.requester_id = '11000000-0000-0000-0000-000000000001'
@@ -138,10 +150,23 @@ select set_config('pacto.test.support_id', (
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '11000000-0000-0000-0000-000000000001', true);
 do $$
+declare rejected boolean := false; before_count bigint;
+begin
+  select count(*) into before_count from public.support_requests;
+  begin perform public.create_support_request('private_food_details', 'not_urgent'); exception when others then rejected := true; end;
+  if not rejected or (select count(*) from public.support_requests) <> before_count then
+    raise exception 'unlisted support choice created a request';
+  end if;
+end $$;
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '11000000-0000-0000-0000-000000000001', true);
+do $$
 declare rejected boolean := false;
 begin
   begin
-    perform public.acknowledge_support_request(current_setting('pacto.test.support_id')::uuid);
+    perform public.acknowledge_support_request(current_setting('pacto.test.support_id')::uuid, 'available_now');
   exception when others then rejected := true;
   end;
   if not rejected then raise exception 'requester acknowledged their own support request'; end if;
@@ -151,13 +176,13 @@ do $$
 declare rejected boolean := false;
 begin
   begin
-    perform public.acknowledge_support_request(current_setting('pacto.test.support_id')::uuid);
+    perform public.acknowledge_support_request(current_setting('pacto.test.support_id')::uuid, 'available_now');
   exception when others then rejected := true;
   end;
   if not rejected then raise exception 'intruder acknowledged a support request'; end if;
 end $$;
 select set_config('request.jwt.claim.sub', '11000000-0000-0000-0000-000000000002', true);
-select * from public.acknowledge_support_request(current_setting('pacto.test.support_id')::uuid);
+select * from public.acknowledge_support_request(current_setting('pacto.test.support_id')::uuid, 'available_now');
 select * from public.close_support_request(current_setting('pacto.test.support_id')::uuid);
 reset role;
 do $$ begin
@@ -177,7 +202,7 @@ do $$
 declare rejected boolean := false;
 begin
   begin
-    perform public.create_support_request('blocked while paused');
+    perform public.create_support_request('conversation', null);
   exception when others then rejected := true;
   end;
   if not rejected then raise exception 'paused member created a support request'; end if;

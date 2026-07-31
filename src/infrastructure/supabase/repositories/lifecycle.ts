@@ -1,6 +1,6 @@
 import type { InviteView, PartnershipView } from "../../../features/partnership/model";
 import type { PartnershipRepository } from "../../../features/partnership/repository";
-import { createSupportRequestSchema, type SupportRequestView, type SupportStatus, type SupportType } from "../../../features/support/model";
+import { acknowledgeSupportRequestSchema, createSupportRequestSchema, type SupportMessage, type SupportRequestView, type SupportResponse, type SupportStatus, type SupportType } from "../../../features/support/model";
 import type { SupportRepository } from "../../../features/support/repository";
 import type { PactoSupabaseClient } from "../client";
 
@@ -33,6 +33,8 @@ type SupportTableRow = {
   id: string;
   requester_id: string;
   support_type: SupportType;
+  request_message: SupportMessage | null;
+  response_type: SupportResponse | null;
   status: SupportStatus;
   created_at: string;
   acknowledged_at: string | null;
@@ -42,6 +44,8 @@ type SupportRpcRow = {
   support_request_id: string;
   requester_id: string;
   support_type: SupportType;
+  request_message: SupportMessage | null;
+  response_type: SupportResponse | null;
   support_status: SupportStatus;
   created_at: string;
   acknowledged_at: string | null;
@@ -49,7 +53,7 @@ type SupportRpcRow = {
 };
 
 const profileColumns = "id,display_name";
-const supportColumns = "id,requester_id,support_type,status,created_at,acknowledged_at,closed_at";
+const supportColumns = "id,requester_id,support_type,request_message,response_type,status,created_at,acknowledged_at,closed_at";
 
 function failure(error: DatabaseError, fallback: string): Error {
   return new Error(error?.message?.trim() || fallback);
@@ -85,6 +89,8 @@ function mapSupport(row: SupportTableRow | SupportRpcRow, viewerId: string, requ
     type,
     status,
     requestedBy: requestedBy ?? (row.requester_id === viewerId ? "me" : "partner"),
+    ...(row.request_message ? { message: row.request_message } : {}),
+    ...(row.response_type ? { response: row.response_type } : {}),
     createdAt: row.created_at,
     updatedAt: row.closed_at ?? row.acknowledged_at ?? row.created_at,
   };
@@ -175,19 +181,20 @@ export function createSupabaseLifecycleRepositories(client: LifecycleClient): {
       const result = await client.from("support_requests").select(supportColumns).order("created_at", { ascending: false });
       return rows<SupportTableRow>(result, "Support requests are unavailable.").map((row) => mapSupport(row, viewerId));
     },
-    async create(type) {
+    async create(input) {
       const viewerId = await actorId(client);
-      const safe = createSupportRequestSchema.parse({ type });
+      const safe = createSupportRequestSchema.parse(input);
       const row = first<SupportRpcRow>(
-        await client.rpc("create_support_request", { request_type: safe.type }),
+        await client.rpc("create_support_request", { request_type: safe.type, optional_message: safe.message ?? null }),
         "Support request creation failed.",
       );
       return mapSupport(row, viewerId, "me");
     },
-    async acknowledge(id) {
+    async acknowledge(id, response) {
       const viewerId = await actorId(client);
+      const safe = acknowledgeSupportRequestSchema.parse({ id, response });
       const row = first<SupportRpcRow>(
-        await client.rpc("acknowledge_support_request", { request_id: id }),
+        await client.rpc("acknowledge_support_request", { request_id: safe.id, selected_response: safe.response }),
         "Support request acknowledgement failed.",
       );
       return mapSupport(row, viewerId, "partner");

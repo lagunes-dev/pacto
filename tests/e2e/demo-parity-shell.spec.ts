@@ -80,6 +80,20 @@ test("restores setup focus and gives temporary notification feedback", async ({ 
   await expect(toast).toBeHidden({ timeout: 1_500 });
 });
 
+test("opens the exact support dialog without sending from Inicio", async ({ page }, testInfo) => {
+  await register(page, `support-dialog-${testInfo.project.name}@example.com`);
+  const trigger = page.getByRole("button", { name: "Pedir el apoyo correcto" });
+  await trigger.click();
+  const dialog = page.getByRole("dialog", { name: "¿Qué necesitas ahora?" });
+  await expect(dialog.getByRole("radio")).toHaveCount(5);
+  for (const label of ["Distráeme unos minutos", "Ayúdame a elegir qué comer", "Recuérdame mi motivo", "Háblame cuando puedas", "Solo acompáñame, sin consejos"]) {
+    await expect(dialog.getByRole("radio", { name: new RegExp(label) })).toBeVisible();
+  }
+  await dialog.getByRole("button", { name: "Cancelar" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(trigger).toBeFocused();
+});
+
 test("topbar reports capability and offline boundaries truthfully", async ({ context, page }, testInfo) => {
   await register(page, `status-${testInfo.project.name}@example.com`);
 

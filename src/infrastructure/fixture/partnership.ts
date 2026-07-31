@@ -3,14 +3,14 @@ import type { PartnershipRepository } from "../../features/partnership/repositor
 import { assertPartnershipTransition, isRedeemableInvite } from "../../features/partnership/transitions";
 import { preferenceUpdateSchema, type PreferenceView } from "../../features/preferences/model";
 import type { PreferenceRepository } from "../../features/preferences/repository";
-import { createSupportRequestSchema, type SupportRequestView, type SupportStatus, type SupportType } from "../../features/support/model";
+import { acknowledgeSupportRequestSchema, createSupportRequestSchema, type SupportMessage, type SupportRequestView, type SupportResponse, type SupportStatus, type SupportType } from "../../features/support/model";
 import type { SupportRepository } from "../../features/support/repository";
 
 export type FixtureUser = { id: string; email: string; displayName: string };
 type InviteRecord = { code: string; inviterId: string; inviteeId: string; status: InviteStatus; expiresAt: string };
 type PartnershipRecord = { id: string; memberIds: [string, string]; status: PartnershipStatus; resumeRequestedBy?: string; createdAt: string; updatedAt: string };
 type PreferenceRecord = PreferenceView;
-type SupportRecord = { id: string; partnershipId: string; requesterId: string; type: SupportType; status: SupportStatus; createdAt: string; updatedAt: string };
+type SupportRecord = { id: string; partnershipId: string; requesterId: string; type: SupportType; message?: SupportMessage; response?: SupportResponse; status: SupportStatus; createdAt: string; updatedAt: string };
 
 export type PartnershipFixtureOptions = { users: [FixtureUser, FixtureUser]; now?: () => Date; inviteTtlMs?: number };
 
@@ -44,7 +44,7 @@ export function createPartnershipFixture({ users, now = () => new Date(), invite
   const mapInvite = ({ code, status, expiresAt }: InviteRecord): InviteView => ({ code, status, expiresAt });
   const mapPreference = (record: PreferenceRecord): PreferenceView => structuredClone(record);
   const mapSupport = (record: SupportRecord, actorId: string): SupportRequestView => ({
-    id: record.id, type: record.type, status: record.status, requestedBy: record.requesterId === actorId ? "me" : "partner", createdAt: record.createdAt, updatedAt: record.updatedAt,
+    id: record.id, type: record.type, status: record.status, requestedBy: record.requesterId === actorId ? "me" : "partner", ...(record.message ? { message: record.message } : {}), ...(record.response ? { response: record.response } : {}), createdAt: record.createdAt, updatedAt: record.updatedAt,
   });
   const activeMembership = (actorId: string) => {
     const record = membership(actorId);
@@ -150,23 +150,27 @@ export function createPartnershipFixture({ users, now = () => new Date(), invite
 
     const support: SupportRepository = {
       async list() { const record = activeMembership(actorId); return supportRequests.filter((item) => item.partnershipId === record.id).map((item) => mapSupport(item, actorId)); },
-      async create(type) {
+      async create(input) {
         const partnershipRecord = activeMembership(actorId);
-        const safe = createSupportRequestSchema.parse({ type });
+        const safe = createSupportRequestSchema.parse(input);
         const timestamp = now().toISOString();
-        const record: SupportRecord = { id: crypto.randomUUID(), partnershipId: partnershipRecord.id, requesterId: actorId, type: safe.type, status: "pending", createdAt: timestamp, updatedAt: timestamp };
+        const record: SupportRecord = { id: crypto.randomUUID(), partnershipId: partnershipRecord.id, requesterId: actorId, type: safe.type, ...(safe.message ? { message: safe.message } : {}), status: "pending", createdAt: timestamp, updatedAt: timestamp };
         supportRequests.push(record);
         return mapSupport(record, actorId);
       },
-      async acknowledge(id) { return updateSupport(id, "pending", "acknowledged"); },
+      async acknowledge(id, response) {
+        const safe = acknowledgeSupportRequestSchema.parse({ id, response });
+        return updateSupport(safe.id, "pending", "acknowledged", safe.response);
+      },
       async close(id) { return updateSupport(id, "acknowledged", "closed"); },
     };
 
-    function updateSupport(id: string, from: SupportStatus, to: SupportStatus) {
+    function updateSupport(id: string, from: SupportStatus, to: SupportStatus, response?: SupportResponse) {
       const partnershipRecord = activeMembership(actorId);
       const record = supportRequests.find((item) => item.id === id && item.partnershipId === partnershipRecord.id);
       if (!record || record.requesterId === actorId || record.status !== from) throw new Error("Support request unavailable.");
       record.status = to;
+      if (response) record.response = response;
       record.updatedAt = now().toISOString();
       return mapSupport(record, actorId);
     }

@@ -171,8 +171,8 @@ export function createFixtureServices(store = createFixtureStore(), now: () => D
   };
   const support: SupportRepository = {
     async list() { return consentServices().support.list(); },
-    async create(type) { return consentServices().support.create(type); },
-    async acknowledge(id) { return consentServices().support.acknowledge(id); },
+    async create(input) { return consentServices().support.create(input); },
+    async acknowledge(id, response) { return consentServices().support.acknowledge(id, response); },
     async close(id) { return consentServices().support.close(id); },
   };
 
