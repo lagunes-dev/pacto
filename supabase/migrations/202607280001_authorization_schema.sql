@@ -46,6 +46,7 @@ create table if not exists public.partnerships (
   status public.partnership_status not null default 'pending',
   accepted_at timestamptz,
   created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
   check (invitee_id is null or invitee_id <> inviter_id)
 );
 
@@ -203,6 +204,20 @@ create trigger profiles_identity_immutable before update on public.profiles
 drop trigger if exists partnerships_identity_immutable on public.partnerships;
 create trigger partnerships_identity_immutable before update on public.partnerships
   for each row execute function public.reject_protected_column_update('id', 'inviter_id', 'invitee_id', 'invite_code', 'created_at');
+create or replace function public.touch_partnership_updated_at()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  new.updated_at = clock_timestamp();
+  return new;
+end;
+$$;
+revoke all on function public.touch_partnership_updated_at() from public, anon, authenticated;
+drop trigger if exists partnerships_updated_at on public.partnerships;
+create trigger partnerships_updated_at before update on public.partnerships
+  for each row execute function public.touch_partnership_updated_at();
 drop trigger if exists sharing_owner_immutable on public.sharing_preferences;
 create trigger sharing_owner_immutable before update on public.sharing_preferences
   for each row execute function public.reject_protected_column_update('user_id');

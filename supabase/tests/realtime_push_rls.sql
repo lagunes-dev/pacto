@@ -27,6 +27,18 @@ begin
       and tgname = 'sync_partnership_realtime_state_trigger' and not tgisinternal
   ) then raise exception 'partnership signal trigger is missing'; end if;
 
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'partnerships'
+      and column_name = 'updated_at' and is_nullable = 'NO'
+  ) then raise exception 'partnership freshness column is missing'; end if;
+
+  if not exists (
+    select 1 from pg_trigger
+    where tgrelid = 'public.partnerships'::regclass
+      and tgname = 'partnerships_updated_at' and not tgisinternal
+  ) then raise exception 'partnership freshness trigger is missing'; end if;
+
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
      and exists (
        select required.table_name

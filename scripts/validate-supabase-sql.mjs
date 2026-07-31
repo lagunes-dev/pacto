@@ -15,6 +15,7 @@ const migrationPaths = [
   "supabase/migrations/202607300001_realtime_push.sql",
   "supabase/migrations/202607300002_daily_checkin_rpc.sql",
   "supabase/migrations/202607310001_demo_parity_complete.sql",
+  "supabase/migrations/202607310005_partnership_updated_at_compatibility.sql",
 ];
 const migrations = migrationPaths.map((path) => readFileSync(`${root}/${path}`, "utf8"));
 const [schema, policies, lifecycle] = migrations;
@@ -86,6 +87,8 @@ const assertions = [
   [realtimePush.includes("create table if not exists public.partnership_realtime_state") && realtimePush.includes("recipient_id uuid primary key") && realtimePush.includes("status text not null check"), "Realtime state table is owner-addressed and status-constrained"],
   [realtimePush.includes("enable row level security") && realtimePush.includes("force row level security") && realtimePush.includes("partnership_realtime_state_owner_select") && realtimePush.includes("recipient_id = (select auth.uid())"), "Realtime state is protected by forced owner-only RLS"],
   [realtimePush.includes("sync_partnership_realtime_state_trigger") && realtimePush.includes("after insert or update of invitee_id, status") && realtimePush.includes("on conflict (recipient_id) do update"), "Realtime state trigger is rerunnable and tracks partnership changes"],
+  [schema.includes("updated_at timestamptz not null default now()") && schema.includes("touch_partnership_updated_at") && realtimePush.includes("p.updated_at"), "partnership Realtime freshness has a maintained updated_at source"],
+  [migrations[11].includes("add column if not exists updated_at timestamptz") && migrations[11].includes("coalesce(updated_at, created_at, now())") && migrations[11].includes("drop trigger if exists partnerships_updated_at"), "partnership freshness compatibility migration is forward-safe"],
   [realtimePush.includes("supabase_realtime") && realtimePush.includes("partnership_realtime_state") && realtimePush.includes("alter publication supabase_realtime add table"), "Realtime publication registration is conditional and allowlisted"],
   [realtimePush.includes("create table if not exists public.push_subscriptions") && realtimePush.includes("endpoint text not null unique") && realtimePush.includes("p256dh text not null") && realtimePush.includes("auth text not null"), "push subscriptions persist only owner routing material"],
   [realtimePush.includes("protect_push_subscription_owner_trigger") && realtimePush.includes("push subscription owner is immutable"), "push subscription ownership is immutable"],
