@@ -77,10 +77,23 @@ after insert or update of invitee_id, status on public.partnerships
 for each row execute function public.sync_partnership_realtime_state();
 
 insert into public.partnership_realtime_state (recipient_id, partnership_id, status, updated_at)
-select recipient_id, p.id, p.status, p.updated_at
-from public.partnerships p
-cross join lateral (values (p.inviter_id), (p.invitee_id)) recipients(recipient_id)
-where recipient_id is not null
+with recipient_partnerships as (
+  select recipients.recipient_id, p.id, p.status, p.updated_at,
+    row_number() over (
+      partition by recipients.recipient_id
+      order by (p.status <> 'ended') desc,
+        p.updated_at desc nulls last,
+        p.accepted_at desc nulls last,
+        p.created_at desc,
+        p.id desc
+    ) as recipient_rank
+  from public.partnerships p
+  cross join lateral (values (p.inviter_id), (p.invitee_id)) recipients(recipient_id)
+  where recipients.recipient_id is not null
+)
+select recipient_id, id, status, updated_at
+from recipient_partnerships
+where recipient_rank = 1
 on conflict (recipient_id) do update
   set partnership_id = excluded.partnership_id,
       status = excluded.status,
