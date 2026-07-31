@@ -14,7 +14,7 @@ const migrationPaths = [
   "supabase/migrations/202607290005_qualify_support_returning.sql",
   "supabase/migrations/202607300001_realtime_push.sql",
   "supabase/migrations/202607300002_daily_checkin_rpc.sql",
-  "supabase/migrations/202607310001_demo_parity_recovery.sql",
+  "supabase/migrations/202607310001_demo_parity_complete.sql",
 ];
 const migrations = migrationPaths.map((path) => readFileSync(`${root}/${path}`, "utf8"));
 const [schema, policies, lifecycle] = migrations;
