@@ -1371,6 +1371,7 @@ h1 {
   margin: auto;
   width: min(560px, calc(100% - 32px));
   max-width: calc(100% - 32px);
+  min-width: 0;
   max-height: min(720px, calc(100dvh - 32px));
   padding: 0;
   overflow: auto;
@@ -1393,6 +1394,12 @@ h1 {
   justify-content: space-between;
   gap: 16px;
   padding: 18px 20px;
+}
+
+.modal > *,
+.modal form {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .modal-head {
@@ -1418,11 +1425,24 @@ h1 {
 
 .modal-body {
   padding: 20px;
+  overflow-wrap: anywhere;
+}
+
+.modal-body input,
+.modal-body select,
+.modal-body textarea {
+  max-width: 100%;
 }
 
 .modal-actions {
+  flex-wrap: wrap;
   justify-content: flex-end;
   border-top: 1px solid var(--color-line);
+}
+
+.modal-actions > .primary-button,
+.modal-actions > .secondary-button {
+  min-width: 0;
 }
 
 .stepper {
@@ -1476,4 +1496,21 @@ h1 {
   .profile-chip > span:last-child { display: none; }
   .toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
   .modal-head, .modal-body, .modal-actions { padding: 16px; }
+}
+
+@media (max-width: 360px) {
+  .modal-head,
+  .modal-actions {
+    gap: 12px;
+  }
+
+  .modal-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .modal-actions > .primary-button,
+  .modal-actions > .secondary-button {
+    width: 100%;
+  }
 }
