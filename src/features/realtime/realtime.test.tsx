@@ -131,6 +131,46 @@ describe("Supabase realtime filters", () => {
     await cleanup();
     expect(client.removeChannel).toHaveBeenCalledWith(channel);
   });
+
+  it.each(["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"] as const)("evicts the channel on terminal status without recursive removal (%s)", async (status) => {
+    let statusCallback: ((status: string) => void) | undefined;
+    const channels = Array.from({ length: 2 }, () => ({
+      on: vi.fn(),
+      subscribe: vi.fn(),
+    }));
+    channels.forEach((channel) => {
+      channel.on.mockReturnValue(channel);
+      channel.subscribe.mockImplementation((callback: (status: string) => void) => {
+        statusCallback = callback;
+        return channel;
+      });
+    });
+    let channelIndex = 0;
+    const client = {
+      channel: vi.fn(() => channels[channelIndex++]),
+      removeChannel: vi.fn(async () => "ok"),
+    };
+    const port = createSupabaseRealtimePort(client as never);
+    const input = {
+      actorId: "actor-a",
+      partnershipId: "partnership-a",
+      onPartnershipChange: vi.fn(),
+      onPreferencesChange: vi.fn(),
+      onSupportChange: vi.fn(),
+      onInactive: vi.fn(),
+    };
+
+    const cleanup = port.subscribe(input);
+    statusCallback?.(status);
+    expect(client.removeChannel).not.toHaveBeenCalled();
+
+    const resubscribeCleanup = port.subscribe(input);
+    expect(client.channel).toHaveBeenCalledTimes(2);
+    await cleanup();
+    expect(client.removeChannel).not.toHaveBeenCalled();
+    await resubscribeCleanup();
+    expect(client.removeChannel).toHaveBeenCalledOnce();
+  });
 });
 
 describe("mounted realtime coordinator", () => {
