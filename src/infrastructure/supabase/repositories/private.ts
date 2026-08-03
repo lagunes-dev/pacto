@@ -159,10 +159,11 @@ export function createSupabasePrivateRepositories(client: PrivateDataClient): {
 
   const preferences: PreferenceRepository = {
     async getMine() {
+      const actorId = await requireActorId(client);
       const [sharingResult, communicationResult, profileResult] = await Promise.all([
         client.from("sharing_preferences").select(sharingColumns).single(),
         client.from("communication_preferences").select(communicationColumns).single(),
-        client.from("profiles").select("timezone").single(),
+        client.from("profiles").select("timezone").eq("id", actorId).single(),
       ]);
       return mapPreference(
         unwrap<SharingPreferenceRow>(sharingResult, "Sharing preferences are unavailable."),
@@ -172,6 +173,7 @@ export function createSupabasePrivateRepositories(client: PrivateDataClient): {
     },
     async updateMine(input: PreferenceUpdate) {
       const safe = preferenceUpdateSchema.parse(input);
+      const actorId = await requireActorId(client);
       const sharing: Record<string, boolean> = {};
       const communication: Record<string, boolean | string> = {};
       if (safe.shareCheckinCompleted !== undefined) sharing.share_checkin_completed = safe.shareCheckinCompleted;
@@ -187,7 +189,7 @@ export function createSupabasePrivateRepositories(client: PrivateDataClient): {
       const [sharingResult, communicationResult, profileResult] = await Promise.all([
         Object.keys(sharing).length ? client.from("sharing_preferences").update(sharing).select(sharingColumns).single() : Promise.resolve(null),
         Object.keys(communication).length ? client.from("communication_preferences").update(communication).select(communicationColumns).single() : Promise.resolve(null),
-        safe.timezone ? client.from("profiles").update({ timezone: safe.timezone }).select("timezone").single() : Promise.resolve(null),
+        safe.timezone ? client.from("profiles").update({ timezone: safe.timezone }).eq("id", actorId).select("timezone").single() : Promise.resolve(null),
       ]);
       if (sharingResult) unwrap(sharingResult, "Sharing preference update failed.");
       if (communicationResult) unwrap(communicationResult, "Communication preference update failed.");

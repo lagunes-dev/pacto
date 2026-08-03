@@ -123,7 +123,7 @@ describe("Supabase private repositories", () => {
     expect(JSON.stringify(operations)).not.toMatch(/private_notes|body/);
   });
 
-  it("maps and updates owner preferences without owner input", async () => {
+  it("scopes profile preferences to the authenticated owner when a partner profile is visible", async () => {
     const sharing = { share_checkin_completed: true, share_general_status: true, share_habit_details: false, share_craving_level: false, share_percentages: false, updated_at: "2026-07-29T10:00:00Z" };
     const communication = { no_threats: true, ask_before_advice: true, no_comparisons: true, pause_allowed: true, preferred_support: "Pregunta primero", updated_at: sharing.updated_at };
     const updatedSharing = { ...sharing, share_percentages: true, share_general_status: false, updated_at: "2026-07-29T11:00:00Z" };
@@ -131,16 +131,26 @@ describe("Supabase private repositories", () => {
     const { client, operations } = createClient({
       sharing_preferences: [{ data: sharing, error: null }, { data: updatedSharing, error: null }, { data: updatedSharing, error: null }],
       communication_preferences: [{ data: communication, error: null }, { data: updatedCommunication, error: null }, { data: updatedCommunication, error: null }],
-      profiles: [{ data: { timezone: "America/Mexico_City" }, error: null }, { data: { timezone: "America/Mexico_City" }, error: null }],
+      profiles: [
+        { data: { timezone: "America/Mexico_City" }, error: null },
+        { data: { timezone: "America/Mexico_City" }, error: null },
+        { data: { timezone: "America/Mexico_City" }, error: null },
+      ],
     });
     const { preferences } = createSupabasePrivateRepositories(client);
 
     await expect(preferences.getMine()).resolves.toMatchObject({ sharePercentages: false, shareGeneralStatus: true, preferredSupport: "Pregunta primero" });
-    await expect(preferences.updateMine({ sharePercentages: true, shareGeneralStatus: false, askBeforeAdvice: false })).resolves.toMatchObject({ sharePercentages: true, shareGeneralStatus: false, askBeforeAdvice: false });
+    expect(operations.find((operation) => operation.table === "profiles" && operation.action === "eq")?.value).toEqual({ column: "id", value: "actor-1" });
+    await expect(preferences.updateMine({ sharePercentages: true, shareGeneralStatus: false, askBeforeAdvice: false, timezone: "America/Mexico_City" })).resolves.toMatchObject({ sharePercentages: true, shareGeneralStatus: false, askBeforeAdvice: false });
     expect(operations.find((operation) => operation.table === "sharing_preferences" && operation.action === "update")?.value).toEqual({
       share_percentages: true,
       share_general_status: false,
     });
+    expect(operations.filter((operation) => operation.table === "profiles" && operation.action === "eq").map((operation) => operation.value)).toEqual([
+      { column: "id", value: "actor-1" },
+      { column: "id", value: "actor-1" },
+      { column: "id", value: "actor-1" },
+    ]);
     await expect(preferences.updateMine({ ownerId: "victim" } as never)).rejects.toThrow();
   });
 
