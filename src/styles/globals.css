@@ -1498,6 +1498,15 @@ h1 {
 }
 
 @media (max-width: 360px) {
+  .checkin-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .checkin-count {
+    align-self: flex-start;
+  }
+
   .modal-head,
   .modal-actions {
     gap: 12px;
