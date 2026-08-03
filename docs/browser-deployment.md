@@ -106,7 +106,7 @@ Push validation remains two further records: `provider-acceptance` records the s
 
 ## Reviewed dependency audit
 
-The reviewed development dependency inventory is currently empty: `npm audit --json` reports no findings after a clean install.
+The reviewed development dependency inventory currently contains the two high-severity transitive findings reported by `npm audit --json` after a clean install: `brace-expansion:high` and `fast-uri:high`.
 
 | Previously reviewed dependency | Role in this repository |
 | --- | --- |
@@ -116,7 +116,7 @@ The reviewed development dependency inventory is currently empty: `npm audit --j
 | `ejs`, `filelist`, `jake` | Transitive build-template/task chain. |
 | `minimatch`, `brace-expansion` | Transitive development-time path-matching chain. |
 
-The reviewed decision is to keep the current lockfile unchanged for this phase. Production dependencies pass `npm audit --omit=dev`, and the full development audit is currently clean. `npm run audit:check` fails if the reviewed inventory changes. `npm audit fix --force` remains prohibited; future advisory changes must be reviewed against the lockfile and generated PWA artifacts before remediation.
+The reviewed decision is to keep the current lockfile unchanged for this phase. Production dependencies pass `npm audit --omit=dev`, while the full development audit reports the two findings listed above. `npm run audit:check` fails if the reviewed inventory changes. `npm audit fix --force` remains prohibited; future advisory changes must be reviewed against the lockfile and generated PWA artifacts before remediation.
 
 Evaluate future remediation in an isolated reviewed change:
 

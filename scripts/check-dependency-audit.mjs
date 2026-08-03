@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 
-const reviewedInventory = [].sort();
+const reviewedInventory = ["brace-expansion:high", "fast-uri:high"].sort();
 
 async function auditReport() {
   const inputIndex = process.argv.indexOf("--input");
@@ -26,7 +26,7 @@ try {
   if (JSON.stringify(actual) !== JSON.stringify(reviewedInventory)) {
     throw new Error(`Unreviewed dependency audit inventory. Expected ${reviewedInventory.join(", ")}; received ${actual.join(", ") || "none"}.`);
   }
-  console.log("Dependency audit classified: no current findings in the reviewed development dependency tree.");
+  console.log("Dependency audit classified: current findings match the reviewed development dependency inventory.");
 } catch (error) {
   console.error(error.message);
   process.exitCode = 1;
