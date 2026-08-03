@@ -22,12 +22,14 @@ export function createSupabaseRealtimePort(client: PactoSupabaseClient): Realtim
           .subscribe((status) => {
             if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
               channels.delete(key);
-              if (channel) void client.removeChannel(channel);
             }
           });
       channels.set(key, channel);
+      let cleanedUp = false;
 
       return async () => {
+        if (cleanedUp) return;
+        cleanedUp = true;
         if (channels.get(key) !== channel) return;
         channels.delete(key);
         await client.removeChannel(channel);

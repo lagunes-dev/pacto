@@ -15,9 +15,8 @@ html {
 
 body {
   margin: 0;
-  min-width: 320px;
+  min-width: 0;
   min-height: 100vh;
-  overflow-x: hidden;
   background:
     radial-gradient(circle at 80% -10%, rgba(87, 147, 104, 0.18), transparent 34rem),
     radial-gradient(circle at 6% 95%, rgba(209, 176, 123, 0.08), transparent 28rem),
@@ -875,6 +874,7 @@ h1 {
 .intervention-option span,
 .intervention-option small {
   display: block;
+  min-width: 0;
 }
 
 .intervention-option small,
@@ -1369,6 +1369,8 @@ h1 {
   inset: 0;
   margin: auto;
   width: min(560px, calc(100% - 32px));
+  max-width: calc(100% - 32px);
+  min-width: 0;
   max-height: min(720px, calc(100dvh - 32px));
   padding: 0;
   overflow: auto;
@@ -1393,11 +1395,18 @@ h1 {
   padding: 18px 20px;
 }
 
+.modal > *,
+.modal form {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .modal-head {
   border-bottom: 1px solid var(--color-line);
 }
 
 .modal-head > div {
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -1415,11 +1424,24 @@ h1 {
 
 .modal-body {
   padding: 20px;
+  overflow-wrap: anywhere;
+}
+
+.modal-body input,
+.modal-body select,
+.modal-body textarea {
+  max-width: 100%;
 }
 
 .modal-actions {
+  flex-wrap: wrap;
   justify-content: flex-end;
   border-top: 1px solid var(--color-line);
+}
+
+.modal-actions > .primary-button,
+.modal-actions > .secondary-button {
+  min-width: 0;
 }
 
 .stepper {
@@ -1473,4 +1495,30 @@ h1 {
   .profile-chip > span:last-child { display: none; }
   .toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
   .modal-head, .modal-body, .modal-actions { padding: 16px; }
+}
+
+@media (max-width: 360px) {
+  .checkin-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .checkin-count {
+    align-self: flex-start;
+  }
+
+  .modal-head,
+  .modal-actions {
+    gap: 12px;
+  }
+
+  .modal-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .modal-actions > .primary-button,
+  .modal-actions > .secondary-button {
+    width: 100%;
+  }
 }

@@ -106,9 +106,9 @@ Push validation remains two further records: `provider-acceptance` records the s
 
 ## Reviewed dependency audit
 
-`npm audit` currently reports eight `high` development-tree findings in the `vite-plugin-pwa`/Workbox build chain:
+The reviewed development dependency inventory currently contains the two high-severity transitive findings reported by `npm audit --json` after a clean install: `brace-expansion:high` and `fast-uri:high`.
 
-| Reviewed inventory | Role in this repository |
+| Previously reviewed dependency | Role in this repository |
 | --- | --- |
 | `vite-plugin-pwa` | Direct development dependency and sole generated PWA authority. |
 | `workbox-build` | Transitive service-worker build tooling. |
@@ -116,7 +116,7 @@ Push validation remains two further records: `provider-acceptance` records the s
 | `ejs`, `filelist`, `jake` | Transitive build-template/task chain. |
 | `minimatch`, `brace-expansion` | Transitive development-time path-matching chain. |
 
-The reviewed decision is to keep the current lockfile unchanged for this phase. Production dependencies pass `npm audit --omit=dev`; the full development audit remains visible and `npm run audit:check` fails if the exact reviewed inventory changes. npm proposes a breaking/force path, so `npm audit fix --force` is prohibited. This is bounded acceptance of development-build exposure, not a claim that the findings are resolved.
+The reviewed decision is to keep the current lockfile unchanged for this phase. Production dependencies pass `npm audit --omit=dev`, while the full development audit reports the two findings listed above. `npm run audit:check` fails if the reviewed inventory changes. `npm audit fix --force` remains prohibited; future advisory changes must be reviewed against the lockfile and generated PWA artifacts before remediation.
 
 Evaluate future remediation in an isolated reviewed change:
 
